@@ -62,6 +62,8 @@ shfire: call plfire
         ld (shy),a
         ld a,1
         ld (shon),a
+        call ufshot             ; cuenta de disparos para el OVNI
+        call sndlas
         jp shdrw
 
 ; -------------------------------------------------------------
@@ -101,12 +103,13 @@ sckhit: ld a,d
 ;         contra que se ha chocado.
 ; -------------------------------------------------------------
 shimp:  ld a,(bimy)
+        cp UFOY+UFOH
+        jp c,ufohit             ; banda del OVNI, por encima de todo
         cp BASEY
-        jr c,shial              ; por encima de los escudos
+        jp c,alhit              ; zona del enjambre
         cp BASEY+BASH
-        jr nc,shial
-        jp bserod               ; dentro de la banda de escudos
-shial:  jp alhit
+        jp c,bserod             ; escudos
+        jp alhit
 
 ; -------------------------------------------------------------
 shdrw:  ld hl,bulspr

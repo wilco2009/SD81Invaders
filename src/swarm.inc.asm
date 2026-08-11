@@ -374,6 +374,7 @@ nxtwav: ld b,40
         call shclr
         call bmclr
         call exclr
+        call ufokil             ; retirar el OVNI si estaba cruzando
 
         ld d,16                 ; limpiar la zona de juego, dejando
         ld b,GNDY-16            ; cabecera, suelo y vidas
@@ -493,6 +494,7 @@ ahk1:   call salspr
         dec (hl)                ; una menos: el barrido acelera
 
         call exset              ; destello donde estaba
+        call sndexa
 
         ld hl,alpts             ; puntuacion de la fila
         ld a,(crow)
@@ -505,15 +507,17 @@ ahk1:   call salspr
 ; -------------------------------------------------------------
 ; addscr - suma A (BCD) al marcador del jugador 1 y lo repinta
 ; -------------------------------------------------------------
-addscr: ld c,a
-        ld hl,score1
+addscr: ld e,a
+        ld d,0
+; addsc2 - suma DE (BCD de 4 digitos) al marcador y lo repinta
+addsc2: ld hl,score1
         ld a,(hl)
-        add a,c
+        add a,e
         daa
         ld (hl),a
         inc hl
         ld a,(hl)
-        adc a,0
+        adc a,d
         daa
         ld (hl),a
         ld hl,(score1)

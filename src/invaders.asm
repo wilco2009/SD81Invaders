@@ -43,6 +43,8 @@ start:  di
         call swinit             ; formacion de 55 aliens
         call plinit             ; nave y vidas
         call bminit             ; ranuras de proyectiles alien
+        call ufoini             ; nave nodriza
+        call sndini             ; volcar los efectos al PEG
 
 ; -------------------------------------------------------------
 ; Bucle principal: una vuelta por frame (50 Hz).
@@ -58,9 +60,8 @@ main:   call waitvs
         call shupd              ; disparo, impactos y erosion
         call bmupd              ; proyectiles alien
         call exupd              ; destello del alien alcanzado
-
-        ; TODO: OVNI y su puntuacion segun el numero de disparos
-        ; TODO: sonido - marcha de fondo en un hilo PEG
+        call ufoupd             ; nave nodriza
+        call sndupd             ; marcha de fondo
 
         ld a,(swleft)           ; formacion despejada
         or a
@@ -158,5 +159,7 @@ hiscor: defw 0
         include "shield.inc.asm"
         include "bomb.inc.asm"
         include "explode.inc.asm"
+        include "ufo.inc.asm"
+        include "sound.inc.asm"
 
         end

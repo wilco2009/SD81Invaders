@@ -29,6 +29,7 @@ plinit: ld a,PLX0
 pldead: call plera
         call shclr
         call bmclr
+        call sndexp
         call pxplod             ; la partida se para mientras estalla
         ld hl,plliv
         dec (hl)

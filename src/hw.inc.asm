@@ -21,6 +21,13 @@ DBUFOFF equ 85              ; desactivar doble buffer
 
 ; --- Puertos ---
 VSPORT  equ 0afh            ; bit 0 = VSYNC
+MCUDAT  equ 0a7h            ; puerto de datos del MCU
+MCUCTL  equ 0afh            ; control del MCU: bit 7 = reloj (mismo que VSPORT)
+
+; --- Comandos del MCU ---
+CMDLPEG equ 40              ; LOAD_PEG:  1B dir + 1B long + datos
+CMDPPEG equ 41              ; PLAY_PEG:  1B hilo + 1B dir
+CMDSPEG equ 42              ; STOP_PEG:  1B hilo
 CHROMA  equ 7fefh           ; Chroma81: bit 5 = color ON, bits 0-3 = borde
 CHRON   equ 20h             ; activar color, borde negro
 KBPORT  equ 0feh            ; teclado (A15..A8 seleccionan la media fila)

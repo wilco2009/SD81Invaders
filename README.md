@@ -3,10 +3,9 @@
 Réplica del arcade de Taito de 1978, escrita desde cero en Z80 para el
 [SD81 Booster](../SD81-Booster/README.md).
 
-Estado: **jugable en lo esencial y verificado en emulador**. Vídeo, sincronismo,
-blitter, marcha del enjambre, disparo, escudos con erosión, colisiones y
-puntuación funcionan. Proyectiles alien, vidas, OVNI y sonido son los
-siguientes pasos.
+Estado: **juego completo**. Enjambre, disparo, escudos destructibles,
+proyectiles alien, vidas, explosiones, oleadas sucesivas, OVNI y sonido por el
+PEG. Falta el *attract mode* y afinar los bitmaps contra la ROM original.
 
 ## Por qué el SD81 Booster
 
@@ -93,14 +92,20 @@ src/
 ├── text.inc.asm      ← texto con los glifos de la ROM ($1E00)
 ├── sprites.inc.asm   ← bitmaps del arcade y tablas por fila
 ├── swarm.inc.asm     ← los 55 aliens: barrido, oleada, rebote y descenso
-├── player.inc.asm    ← nave y lectura de controles
+├── player.inc.asm    ← nave, controles, vidas y muerte
 ├── shot.inc.asm      ← disparo del jugador y reparto de impactos
-└── shield.inc.asm    ← los cuatro escudos y su erosión
+├── shield.inc.asm    ← los cuatro escudos y su erosión
+├── bomb.inc.asm      ← proyectiles alien: tres ranuras, tres tipos
+├── explode.inc.asm   ← explosiones de alien y de nave
+├── ufo.inc.asm       ← nave nodriza y su puntuación
+└── sound.inc.asm     ← protocolo con el MCU y efectos PEG
 ```
 
-El binario ocupa 1839 bytes en `$7530`–`$7C5F`, con 929 bytes de margen hasta
-`$8000`, donde empieza el bitmap de pantalla. **Ese margen es el presupuesto
-real que queda**: al ampliarlo habrá que bajar el `org` y el `CLEAR` a la vez.
+El binario ocupa 3651 bytes en `$61A8`–`$6FEB`, con 4117 bytes de margen hasta
+`$8000`, donde empieza el bitmap de pantalla. Al agotarlo habrá que bajar el
+`org` **y el `CLEAR` del cargador a la vez**: cargar en una dirección código
+ensamblado para otra da pantalla negra, porque el primer `call` ya salta a donde
+no hay nada.
 
 ## Decisiones de fidelidad
 
@@ -134,19 +139,42 @@ Eso mapea exactamente a filas de atributos 8×8 — rojo en la banda del OVNI,
 verde en la zona de escudos y nave, blanco en el resto — sin *attribute clash*
 real, porque no hay solapamiento cromático entre sprites.
 
+**La marcha acelera sola.** El tempo de los cuatro tonos graves sale del número
+de aliens vivos, no de un temporizador: la música corre más porque queda menos
+formación. Es el mismo mecanismo que hace acelerar al enjambre.
+
+**El OVNI no vale lo que parece.** El arcade llevaba la cuenta de los disparos
+del jugador y consultaba con ella una tabla de 15 entradas, así que la
+puntuación parecía aleatoria pero era perfectamente predecible — de ahí la
+técnica conocida de contar disparos para cazar el OVNI de 300 puntos. La tabla
+está reproducida en `ufo.inc.asm`.
+
+## Sonido
+
+El PEG del interface es una máquina virtual con acceso directo a los registros
+del AY y tres hilos paralelos. Una vez lanzado un efecto **no consume ni un
+ciclo del Z80**, así que el sonido sale prácticamente gratis dentro del
+presupuesto de frame. Los efectos se vuelcan una sola vez al arrancar y después
+solo se envían tres bytes por disparo.
+
+| Hilo | Uso |
+|------|-----|
+| 0 | Marcha de fondo |
+| 1 | Disparo del jugador y OVNI |
+| 2 | Explosiones |
+
+Con solo tres hilos, disparar corta el zumbido del OVNI. Es la única concesión.
+
+Las variables del PEG (`V0`–`V15`) son comunes a los tres hilos, así que cada
+efecto usa las suyas —láser `V0`–`V1`, explosiones `V4`–`V5`, OVNI `V2`—; si se
+compartieran, dos efectos simultáneos se estropearían mutuamente.
+
 ## Pendiente
 
-En orden de implementación sugerido:
-
-1. Proyectiles alien: los tres tipos (*rolling*, *plunger*, *squiggly*).
-2. Muerte del jugador, vidas y fin de partida.
-3. Invasión: los aliens llegan abajo y se acaba la partida.
-4. OVNI, con la puntuación según el número de disparos del jugador.
-5. Explosión del alien alcanzado (el sprite de estallido, unos frames).
-6. Oleadas: al despejar la formación, la siguiente empieza más abajo.
-7. Sonido: marcha de fondo de cuatro tonos en un hilo PEG, más disparo y
-   explosiones en los otros dos.
-8. *Attract mode* y la secuencia de demostración.
+- *Attract mode* y la secuencia de demostración.
+- Mostrar la puntuación del OVNI en el sitio donde se le derriba.
+- Contrastar todos los bitmaps con un volcado de la ROM de Taito.
+- Ajustar los periodos AY de la marcha al reloj real del interface.
 
 ## Notas y supuestos
 
