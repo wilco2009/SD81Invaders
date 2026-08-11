@@ -106,6 +106,81 @@ pxspr:  ld hl,plexp
         add hl,de
         ret
 
+; =============================================================
+; Explosiones de proyectil - dos ranuras, una por bando
+;
+; Se dibujan con OR y al agotarse el tiempo se retiran con
+; AND NOT. De ese borrado sale gratis la erosion del fondo: los
+; pixeles que quedaban tapados se van con la explosion. Es asi
+; como el arcade muerde la linea verde del suelo cuando una bomba
+; revienta abajo, sin codigo dedicado a ello.
+;
+; Ranura 0 - disparo del jugador al agotarse arriba
+; Ranura 1 - bomba alien al llegar al suelo
+; =============================================================
+
+BLTIME  equ 14                  ; frames que dura la explosion
+BLSZ    equ 6                   ; act, x, y, tiempo, sprite (2)
+NBLAST  equ 2
+
+; blsetp / blseta - lanzar explosion en su ranura
+;                   HL = sprite, D = y, E = x
+blsetp: ld ix,bltab
+        jr blset
+blseta: ld ix,bltab+BLSZ
+
+blset:  push hl
+        push de
+        call blclr              ; retirar lo que hubiera antes
+        pop de
+        pop hl
+        ld (ix+4),l
+        ld (ix+5),h
+        ld (ix+1),e
+        ld (ix+2),d
+        ld (ix+3),BLTIME
+        ld (ix+0),1
+        ld b,8
+        jp sprdrw
+
+; blclr - retira la explosion de la ranura IX, si la hay
+blclr:  ld a,(ix+0)
+        or a
+        ret z
+        ld (ix+0),0
+        ld l,(ix+4)
+        ld h,(ix+5)
+        ld e,(ix+1)
+        ld d,(ix+2)
+        ld b,8
+        jp sprera
+
+; blclra - retira las dos, para las pausas y cambios de oleada
+blclra: ld ix,bltab
+        call blclr
+        ld ix,bltab+BLSZ
+        jp blclr
+
+; blupd - un frame de explosiones
+blupd:  ld ix,bltab
+        ld b,NBLAST
+blu1:   push bc
+        push ix
+        ld a,(ix+0)
+        or a
+        jr z,blu2
+        dec (ix+3)
+        jr nz,blu2
+        call blclr
+blu2:   pop ix
+        pop bc
+        ld de,BLSZ
+        add ix,de
+        djnz blu1
+        ret
+
+bltab:  defs NBLAST*BLSZ
+
 ; -------------------------------------------------------------
 ; pause - espera B frames sincronizados al VSYNC
 ; -------------------------------------------------------------

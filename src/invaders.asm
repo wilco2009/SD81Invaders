@@ -65,7 +65,9 @@ quit:   call sndoff             ; callar AY y los tres hilos del PEG
 ; los marcadores, o la segunda partida empezaria donde acabo la
 ; primera.
 ; -------------------------------------------------------------
-newgam: call clrbmp             ; borrar la pantalla de atraccion
+newgam: call blclra             ; sin esto, una explosion viva al acabar
+        call clrbmp             ; la partida se borraria luego sobre la
+                                ; pantalla nueva, mordiendola
         call ayini              ; el AY vuelve de sndoff apagado
         ld hl,0
         ld (score1),hl
@@ -104,6 +106,7 @@ gmloop: call waitvs
         call shupd              ; disparo, impactos y erosion
         call bmupd              ; proyectiles alien
         call exupd              ; destello del alien alcanzado
+        call blupd              ; explosiones de proyectil
         call ufoupd             ; nave nodriza
         call sndupd             ; marcha de fondo
 

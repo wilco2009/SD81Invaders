@@ -231,7 +231,23 @@ bmimp:  ld a,(bimy)
         ret c                   ; hueco entre escudos y nave
         cp PLY+8
         jp c,pldead             ; ha dado a la nave
-        ret                     ; suelo
+; cae aqui al tocar el suelo
+
+; -------------------------------------------------------------
+; bmgnd - la bomba revienta contra la linea del suelo
+;
+; La explosion se dibuja encima de la linea verde y, al retirarla,
+; se lleva los pixeles que tapaba: de ahi salen las muescas del
+; original. No hace falta erosionar aparte.
+; -------------------------------------------------------------
+bmgnd:  ld hl,dmgbom
+        ld a,(bimx)
+        sub 3
+        ld e,a
+        ld a,(bimy)
+        sub 4
+        ld d,a
+        jp blseta
 
 ; -------------------------------------------------------------
 ; bmspr - HL = sprite del tipo y fotograma de la bomba en IX

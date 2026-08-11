@@ -33,9 +33,17 @@ shupd:  ld a,(shon)
         ret nz                  ; hubo impacto: el disparo ya se anulo
         jp shdrw
 
+; El disparo no se desvanece al llegar arriba: revienta contra el
+; techo del campo, como en el arcade.
 shkill: xor a
         ld (shon),a
-        ret
+        ld hl,dmglas
+        ld a,(shx)
+        sub 3
+        ld e,a
+        ld a,(shy)
+        ld d,a
+        jp blsetp
 
 ; -------------------------------------------------------------
 ; shclr - anula el disparo en vuelo, si lo hay, borrandolo de la

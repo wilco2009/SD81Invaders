@@ -392,6 +392,7 @@ nxtwav: call mchoff             ; sin esto la nota se queda sonando
         call shclr
         call bmclr
         call exclr
+        call blclra
         call ufokil             ; retirar el OVNI si estaba cruzando
 
         ld d,16                 ; limpiar la zona de juego, dejando
