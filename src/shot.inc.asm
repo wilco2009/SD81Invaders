@@ -38,6 +38,19 @@ shkill: xor a
         ret
 
 ; -------------------------------------------------------------
+; shclr - anula el disparo en vuelo, si lo hay, borrandolo de la
+;         pantalla. Lo usan la muerte del jugador y las bombas
+;         alien, que en el arcade pueden derribar tu disparo.
+; -------------------------------------------------------------
+shclr:  ld a,(shon)
+        or a
+        ret z
+        call shera
+        xor a
+        ld (shon),a
+        ret
+
+; -------------------------------------------------------------
 ; shfire - lanza un disparo si el boton esta pulsado
 ; -------------------------------------------------------------
 shfire: call plfire

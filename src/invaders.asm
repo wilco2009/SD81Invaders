@@ -10,17 +10,19 @@
 ; Ensamblar con zmac (ver build.bat). Cargar desde BASIC:
 ;
 ;   10 FAST
-;   20 LOAD THEN CLEAR 29999
-;   30 LOAD FAST 'INVADERS.BIN' CODE 30000
-;   40 RAND USR 30000
+;   20 LOAD THEN CLEAR 24999
+;   30 LOAD FAST 'INVADERS.BIN' CODE 25000
+;   40 RAND USR 25000
 ;   50 SLOW
 ;
-; El CLEAR baja RAMTOP por debajo del codigo para que el BASIC no
-; lo pise. Si se cambia el org hay que cambiar el CLEAR con el.
+; OJO: esta rama usa 25000, no 30000. El org y el CLEAR van
+; siempre juntos - cargar en una direccion codigo ensamblado para
+; otra da pantalla negra, porque el primer CALL ya se va a donde
+; no hay nada.
 ;
-; El FAST de la linea 10 no es opcional: en SLOW sigue activo el
-; generador de NMI del ZX81, que el DI de aqui no puede parar por
-; ser no enmascarable, y el temporizado del bucle se va al traste.
+; El FAST de la linea 10 tampoco es opcional: en SLOW sigue activo
+; el generador de NMI del ZX81, que el DI de aqui no puede parar
+; por ser no enmascarable, y el temporizado se va al traste.
 ;
 ; Controles: 5 = izquierda   8 = derecha   0 = disparo   Q = salir
 ; =============================================================
@@ -29,16 +31,19 @@
         include "hw.inc.asm"
         include "layout.inc.asm"
 
-; El codigo vive entre RAMTOP (CLEAR 29999) y $8000, donde empieza
-; el bitmap de pantalla: 2768 bytes utiles.
-        org 30000
+; El codigo vive entre RAMTOP y $8000, donde empieza el bitmap de
+; pantalla. Con org 30000 solo quedaban 77 bytes de margen; a
+; 25000 (con CLEAR 24999) hay ~5 KB para lo que falta: OVNI,
+; explosiones, oleadas y sonido.
+        org 25000
 
 start:  di
         call vinit              ; modo de video y doble buffer
         call hdrini             ; rotulos, marcadores y suelo
         call bsdraw             ; los cuatro escudos
         call swinit             ; formacion de 55 aliens
-        call plinit             ; nave
+        call plinit             ; nave y vidas
+        call bminit             ; ranuras de proyectiles alien
 
 ; -------------------------------------------------------------
 ; Bucle principal: una vuelta por frame (50 Hz).
@@ -52,20 +57,44 @@ main:   call waitvs
         call swstep             ; mueve un alien de la formacion
         call plmove             ; nave del jugador
         call shupd              ; disparo, impactos y erosion
+        call bmupd              ; proyectiles alien
 
-        ; TODO: proyectiles alien (rolling / plunger / squiggly)
         ; TODO: OVNI y su puntuacion segun el numero de disparos
-        ; TODO: vidas, oleadas y fin de partida
+        ; TODO: explosion de alien y de nave
+        ; TODO: oleadas sucesivas
         ; TODO: sonido - marcha de fondo en un hilo PEG
 
+        ld a,(swy)              ; el enjambre ha llegado abajo
+        cp SWYMAX
+        jr nc,mainvd
+        ld a,(gover)            ; sin vidas
+        or a
+        jr nz,mainov
         ld a,KRQWE
         in a,(KBPORT)
         and 1                   ; Q = salir
         jr nz,main
+        jr quit
+
+mainvd: ld a,1
+        ld (gover),a
+mainov: call govdrw             ; rotulo de fin de partida
+movwt:  ld a,KRQWE
+        in a,(KBPORT)
+        and 1                   ; esperar a Q
+        jr nz,movwt
 
 quit:   call vdone              ; devolver el ZX81 a su modo normal
         ei
         ret
+
+; -------------------------------------------------------------
+; govdrw - rotulo de fin de partida
+; -------------------------------------------------------------
+govdrw: ld hl,txtgov
+        ld d,12
+        ld e,11
+        jp prtstr
 
 ; -------------------------------------------------------------
 ; hdrini - cabecera fija de la pantalla
@@ -109,6 +138,8 @@ txthi:  defb CHA+'H'-'A',CHA+'I'-'A',CHMIN,CHA+'S'-'A',CHA+'C'-'A'
         defb CHA+'O'-'A',CHA+'R'-'A',CHA+'E'-'A',CHEOS
 txts2:  defb CHA+'S'-'A',CHA+'C'-'A',CHA+'O'-'A',CHA+'R'-'A'
         defb CHA+'E'-'A',CHLT,CH0+2,CHGT,CHEOS
+txtgov: defb CHA+'G'-'A',CHA+'A'-'A',CHA+'M'-'A',CHA+'E'-'A',CHSP
+        defb CHA+'O'-'A',CHA+'V'-'A',CHA+'E'-'A',CHA+'R'-'A',CHEOS
 
 ; --- marcadores, en BCD empaquetado de 4 digitos ---
 score1: defw 0
@@ -123,5 +154,6 @@ hiscor: defw 0
         include "player.inc.asm"
         include "shot.inc.asm"
         include "shield.inc.asm"
+        include "bomb.inc.asm"
 
         end

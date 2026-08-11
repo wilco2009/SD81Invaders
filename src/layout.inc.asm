@@ -25,6 +25,11 @@ PLW     equ 13                  ; ancho en pixeles
 PLXMIN  equ FLDL
 PLXMAX  equ FLDR-PLW
 PLX0    equ 122                 ; centrada al empezar
+PLLIV0  equ 3                   ; vidas iniciales
+
+; y del enjambre a la que se considera invasion: la fila de abajo
+; alcanza la altura de la nave
+SWYMAX  equ PLY-64-8
 
 ; --- Columnas de texto de los tres marcadores ---
 COLS1   equ 1

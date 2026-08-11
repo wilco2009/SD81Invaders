@@ -189,6 +189,70 @@ salofs: ld a,(ccol)
         ret
 
 ; -------------------------------------------------------------
+; salpos - posicion en pantalla del alien (crank,ccol,cidx)
+;          -> cax / cay, y deja la fila en crow
+;
+; Durante el barrido media formacion esta ya en la posicion de la
+; pasada nueva y media en la anterior. La regla es una sola: si el
+; barrido ya paso por esa casilla (cidx < swidx) usa la nueva, y
+; si todavia no, la vieja.
+; -------------------------------------------------------------
+salpos: call salofs             ; B = desplazamiento y, C = x
+        ld a,(cidx)
+        ld hl,swidx
+        cp (hl)
+        jr nc,sposo
+        ld a,(swx)              ; ya barrido
+        add a,c
+        ld (cax),a
+        ld a,(swy)
+        add a,b
+        ld (cay),a
+        ret
+sposo:  ld a,(opx)              ; aun sin barrer
+        add a,c
+        ld (cax),a
+        ld a,(opy)
+        add a,b
+        ld (cay),a
+        ret
+
+; -------------------------------------------------------------
+; alcol - busca en la columna C el alien vivo mas bajo, que es el
+;         que dispara. NZ si lo encuentra, con crank/ccol/cidx
+;         puestos. El rango 0 es la fila de abajo, asi que basta
+;         recorrer la columna hacia arriba y quedarse con el
+;         primero.
+; -------------------------------------------------------------
+alcol:  ld a,c
+        ld (ccol),a
+        ld (cidx),a
+        ld hl,swaliv
+        ld e,a
+        ld d,0
+        add hl,de               ; rango 0 de esa columna
+        xor a
+        ld (crank),a
+        ld b,SWROWS
+alc1:   ld a,(hl)
+        or a
+        jr nz,alc2
+        ld de,SWCOLS
+        add hl,de
+        ld a,(cidx)
+        add a,SWCOLS
+        ld (cidx),a
+        ld a,(crank)
+        inc a
+        ld (crank),a
+        djnz alc1
+        xor a
+        ret                     ; columna vacia
+alc2:   ld a,1
+        or a
+        ret
+
+; -------------------------------------------------------------
 ; salspr - puntero al sprite del alien de la fila crow
 ;          A = fotograma (0/1)  ->  HL.  Destruye BC y DE.
 ; -------------------------------------------------------------
@@ -346,26 +410,8 @@ ahrow:  xor a
 ; La casilla usa la posicion nueva si el barrido ya paso por ella
 ; en esta pasada (cidx < swidx) y la vieja si todavia no.
 ; -------------------------------------------------------------
-ahtest: call salofs             ; B = desplazamiento y, C = x
-        ld a,(cidx)
-        ld hl,swidx
-        cp (hl)
-        jr nc,ahtold
-        ld a,(swx)              ; ya barrido: posicion nueva
-        add a,c
-        ld (cax),a
-        ld a,(swy)
-        add a,b
-        ld (cay),a
-        jr ahtbox
-ahtold: ld a,(opx)              ; aun sin barrer: posicion anterior
-        add a,c
-        ld (cax),a
-        ld a,(opy)
-        add a,b
-        ld (cay),a
-
-ahtbox: ld a,(bimy)             ; cay <= bimy < cay+8
+ahtest: call salpos
+        ld a,(bimy)             ; cay <= bimy < cay+8
         ld hl,cay
         sub (hl)
         cp 8

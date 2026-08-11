@@ -15,7 +15,80 @@
 ; -------------------------------------------------------------
 plinit: ld a,PLX0
         ld (plx),a
+        ld a,PLLIV0
+        ld (plliv),a
+        call drwliv
         jp pldrw
+
+; -------------------------------------------------------------
+; pldead - una bomba ha alcanzado la nave
+;
+; Se limpian disparo y bombas para que el jugador no reaparezca
+; debajo de un proyectil que ya venia en camino.
+; -------------------------------------------------------------
+pldead: call plera
+        call shclr
+        call bmclr
+        ld hl,plliv
+        dec (hl)
+        call drwliv
+        ld a,(plliv)
+        or a
+        jr z,pdover
+        ld a,PLX0               ; renacer en el centro
+        ld (plx),a
+        jp pldrw
+pdover: ld a,1
+        ld (gover),a
+        ret
+
+; -------------------------------------------------------------
+; drwliv - indicador de vidas: el numero y una nave por cada vida
+;          de reserva (la que se esta jugando no cuenta)
+; -------------------------------------------------------------
+drwliv: call clrliv
+        ld a,(plliv)
+        add a,CH0
+        ld d,ROWLIV
+        ld e,1
+        call prtchr
+        ld a,(plliv)
+        or a
+        ret z
+        dec a
+        ret z
+        ld b,a
+        ld e,3*8                ; x en pixeles
+bliv1:  push bc
+        push de
+        ld hl,plship
+        ld d,ROWLIV*8
+        ld b,8
+        call sprdrw
+        pop de
+        pop bc
+        ld a,e
+        add a,16
+        ld e,a
+        djnz bliv1
+        ret
+
+; clrliv - borra la banda de 8 lineas del indicador
+clrliv: ld d,ROWLIV*8
+        ld b,8
+clv1:   push bc
+        push de
+        ld e,0
+        call pixad
+        ld b,32
+clv2:   ld (hl),0
+        inc l
+        djnz clv2
+        pop de
+        pop bc
+        inc d
+        djnz clv1
+        ret
 
 ; -------------------------------------------------------------
 ; plmove - lee el teclado y desplaza la nave 1 px por frame,
@@ -74,4 +147,5 @@ plera:  ld hl,plship
 
 ; --- estado del jugador ---
 plx:    defb PLX0               ; x de la nave
-plliv:  defb 3                  ; vidas (TODO)
+plliv:  defb PLLIV0             ; vidas restantes
+gover:  defb 0                  ; 1 = partida terminada
