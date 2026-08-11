@@ -69,9 +69,12 @@ KRSPC   equ 07fh            ; SPACE . M N B
 
 ; --- Codigos de caracter del ZX81 (juego de la ROM en $1E00) ---
 CHSP    equ 0               ; espacio
+CHQUE   equ 15              ; ?
 CHGT    equ 18              ; >
 CHLT    equ 19              ; <
+CHEQ    equ 20              ; =
 CHMIN   equ 22              ; -
+CHAST   equ 23              ; *
 CH0     equ 28              ; '0' .. '9' = 28..37
 CHA     equ 38              ; 'A' .. 'Z' = 38..63
 CHEOS   equ 255             ; terminador de cadena

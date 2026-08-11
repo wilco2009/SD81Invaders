@@ -38,23 +38,67 @@
 
 start:  di
         call vinit              ; modo de video y doble buffer
+        call sndini             ; volcar los efectos al PEG
+
+; -------------------------------------------------------------
+; Ciclo de la maquina: atraccion, partida, y vuelta a empezar.
+; Ambas rutinas devuelven Z cuando el jugador pide salir.
+; -------------------------------------------------------------
+mach:   call attmod             ; titulo y tabla de puntuaciones
+        jr z,quit
+        call newgam
+        call gmloop
+        jr nz,mach
+
+quit:   call sndoff             ; callar AY y los tres hilos del PEG
+        call vdone              ; devolver el ZX81 a su modo normal
+        ei
+        ret
+
+; -------------------------------------------------------------
+; newgam - deja todo listo para una partida desde cero
+;
+; Hasta que hubo modo de atraccion no hacia falta: el binario se
+; cargaba, se jugaba una vez y se salia, asi que el estado inicial
+; venia en los propios datos. Con el ciclo cerrado hay que
+; devolver a su sitio la oleada, la altura de salida, las vidas y
+; los marcadores, o la segunda partida empezaria donde acabo la
+; primera.
+; -------------------------------------------------------------
+newgam: call clrbmp             ; borrar la pantalla de atraccion
+        call ayini              ; el AY vuelve de sndoff apagado
+        ld hl,0
+        ld (score1),hl
+        xor a
+        ld (gover),a
+        ld (shon),a
+        ld (exon),a
+        ld (mchnot),a
+        ld a,1
+        ld (mchcnt),a
+        ld a,SWY0               ; primera oleada, arriba del todo
+        ld (swy0v),a
+        ld a,1
+        ld (wave),a
         call hdrini             ; rotulos, marcadores y suelo
         call bsdraw             ; los cuatro escudos
         call swinit             ; formacion de 55 aliens
         call plinit             ; nave y vidas
         call bminit             ; ranuras de proyectiles alien
-        call ufoini             ; nave nodriza
-        call sndini             ; volcar los efectos al PEG
+        jp ufoini               ; nave nodriza
 
 ; -------------------------------------------------------------
-; Bucle principal: una vuelta por frame (50 Hz).
+; gmloop - una partida entera, una vuelta por frame (50 Hz).
 ;
 ; Todo el trabajo ocurre justo despues del flanco de VSYNC, con
 ; ~16 ms por delante antes de que el hardware tome la siguiente
 ; instantanea de HFILE. El presupuesto es holgado: el enjambre
 ; solo repinta un alien por frame.
+;
+; Devuelve Z si el jugador pide salir a BASIC, NZ si la partida
+; ha terminado y toca volver al modo de atraccion.
 ; -------------------------------------------------------------
-main:   call waitvs
+gmloop: call waitvs
         call swstep             ; mueve un alien de la formacion
         call plmove             ; nave del jugador
         call shupd              ; disparo, impactos y erosion
@@ -69,28 +113,40 @@ main:   call waitvs
 
         ld a,(swy)              ; el enjambre ha llegado abajo
         cp SWYMAX
-        jr nc,mainvd
+        jr nc,gmlinv
         ld a,(gover)            ; sin vidas
         or a
-        jr nz,mainov
+        jr nz,gmlend
         ld a,KRQWE
         in a,(KBPORT)
         and 1                   ; Q = salir
-        jr nz,main
-        jr quit
+        jr nz,gmloop
+        ret                     ; Z: salir a BASIC
 
-mainvd: ld a,1
+gmlinv: ld a,1
         ld (gover),a
-mainov: call govdrw             ; rotulo de fin de partida
-movwt:  ld a,KRQWE
-        in a,(KBPORT)
-        and 1                   ; esperar a Q
-        jr nz,movwt
+gmlend: call hiupd              ; puntuacion maxima
+        call govdrw             ; rotulo de fin de partida
+        call sndoff             ; silencio mientras se lee
+        ld b,150
+        call pause
+        or 1
+        ret                     ; NZ: volver a la atraccion
 
-quit:   call sndoff             ; callar AY y los tres hilos del PEG
-        call vdone              ; devolver el ZX81 a su modo normal
-        ei
-        ret
+; -------------------------------------------------------------
+; hiupd - se queda con la mejor puntuacion de la sesion
+; -------------------------------------------------------------
+hiupd:  ld hl,(score1)
+        ld de,(hiscor)
+        ld a,h
+        cp d
+        jr c,hiup1
+        jr nz,hiup2
+        ld a,l
+        cp e
+        jr c,hiup1
+hiup2:  ld (hiscor),hl
+hiup1:  ret
 
 ; -------------------------------------------------------------
 ; govdrw - rotulo de fin de partida
@@ -162,5 +218,6 @@ hiscor: defw 0
         include "explode.inc.asm"
         include "ufo.inc.asm"
         include "sound.inc.asm"
+        include "attract.inc.asm"
 
         end

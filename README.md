@@ -3,9 +3,10 @@
 Réplica del arcade de Taito de 1978, escrita desde cero en Z80 para el
 [SD81 Booster](../SD81-Booster/README.md).
 
-Estado: **juego completo**. Enjambre, disparo, escudos destructibles,
-proyectiles alien, vidas, explosiones, oleadas sucesivas, OVNI y sonido por el
-PEG. Falta el *attract mode* y afinar los bitmaps contra la ROM original.
+Estado: **juego completo y rejugable**. Modo de atracción, enjambre, disparo,
+escudos destructibles, proyectiles alien, vidas, explosiones, oleadas sucesivas,
+OVNI y sonido. Falta la demo jugándose sola y afinar los bitmaps contra la ROM
+original.
 
 ## Por qué el SD81 Booster
 
@@ -69,7 +70,7 @@ Requiere un core FPGA con soporte de `POKE 2057` (doble buffer).
 |-------|--------|
 | `5` | Izquierda |
 | `8` | Derecha |
-| `0` | Disparo |
+| `0` | Disparo, y empezar partida desde la atracción |
 | `Q` | Salir a BASIC |
 
 Son las teclas de cursor de Sinclair, así que el joystick DB9 funciona sin
@@ -98,8 +99,16 @@ src/
 ├── bomb.inc.asm      ← proyectiles alien: tres ranuras, tres tipos
 ├── explode.inc.asm   ← explosiones de alien y de nave
 ├── ufo.inc.asm       ← nave nodriza y su puntuación
-└── sound.inc.asm     ← protocolo con el MCU y efectos PEG
+├── sound.inc.asm     ← marcha en el AY, protocolo MCU y efectos PEG
+└── attract.inc.asm   ← título y SCORE ADVANCE TABLE
 ```
+
+El ciclo de la máquina es **atracción → partida → atracción**, y ambas fases
+devuelven `Z` cuando el jugador pide salir. Hasta que hubo modo de atracción no
+existía un "empezar partida nueva": el binario se cargaba, se jugaba una vez y
+se salía, así que el estado inicial venía en los propios datos. Ahora `newgam`
+devuelve a su sitio la oleada, la altura de salida del enjambre, las vidas y los
+marcadores — sin eso, la segunda partida empezaría donde acabó la primera.
 
 El binario ocupa 3651 bytes en `$61A8`–`$6FEB`, con 4117 bytes de margen hasta
 `$8000`, donde empieza el bitmap de pantalla. Al agotarlo habrá que bajar el
@@ -214,7 +223,8 @@ si suenan altos o bajos, se ajustan en la tabla `mchton` de `sound.inc.asm`.
 
 ## Pendiente
 
-- *Attract mode* y la secuencia de demostración.
+- La demo jugándose sola dentro del modo de atracción: necesita una IA mínima
+  para la nave (seguir la columna más baja, disparar, esquivar bombas).
 - Mostrar la puntuación del OVNI en el sitio donde se le derriba.
 - Contrastar todos los bitmaps con un volcado de la ROM de Taito.
 - Ajustar los periodos AY de la marcha al reloj real del interface.
