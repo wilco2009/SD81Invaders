@@ -100,6 +100,9 @@ clv2:   ld (hl),0
 ; -------------------------------------------------------------
 plmove: ld a,(plx)
         ld b,a
+        ld a,(demoon)
+        or a
+        jr nz,pldemo            ; en la demo manda la IA
         ld a,KR123              ; media fila 1 2 3 4 5
         in a,(KBPORT)
         bit 4,a                 ; tecla 5 = izquierda
@@ -125,6 +128,35 @@ plm2:   ld a,(plx)
         ld a,b
         ld (plx),a
         jp pldrw
+
+; -------------------------------------------------------------
+; pldemo - la IA coloca la nave bajo el alien vivo mas bajo.
+;          Deja en B la x deseada y sigue por el tronco comun,
+;          igual que haria el teclado.
+; -------------------------------------------------------------
+pldemo: push bc
+        call demtgt
+        pop bc
+        or a
+        jp z,plm2               ; sin objetivo: quieta
+        ld a,(cax)
+        add a,4                 ; centro aproximado del alien
+        ld c,a
+        ld a,b
+        add a,PLW/2             ; centro de la nave
+        cp c
+        jp z,plm2               ; ya esta alineada
+        jr c,pldmr
+        ld a,b                  ; el objetivo queda a la izquierda
+        cp PLXMIN+1
+        jp c,plm2
+        dec b
+        jp plm2
+pldmr:  ld a,b                  ; queda a la derecha
+        cp PLXMAX
+        jp nc,plm2
+        inc b
+        jp plm2
 
 ; -------------------------------------------------------------
 ; plfire - devuelve Z si el disparo esta pulsado

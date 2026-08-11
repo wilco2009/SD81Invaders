@@ -27,6 +27,8 @@ UFODIV  equ 1                   ; se mueve uno de cada N frames
 ; aproximadamente lo mismo que el cruce.
 UFOMIN  equ 9                   ; aliens minimos para que aparezca
 UFOWAIT equ 1200                ; frames entre apariciones (~24 s)
+UFOROW  equ 2                   ; fila de texto de la banda del OVNI
+UFSTIME equ 60                  ; frames que se queda la puntuacion
 
 ; -------------------------------------------------------------
 ; ufoini - sin OVNI y con la primera aparicion programada
@@ -35,6 +37,7 @@ ufoini: xor a
         ld (ufon),a
         ld (ufsid),a
         ld (ufcnt),a
+        ld (ufstim),a
         ld hl,UFOWAIT
         ld (ufotim),hl
         ret
@@ -122,11 +125,6 @@ ufohit: ld a,(ufon)
         or a
         ret z                   ; no habia OVNI: disparo perdido
         call ufoera
-        ld a,(ufox)             ; destello donde estaba
-        ld (cax),a
-        ld a,UFOY
-        ld (cay),a
-        call exset
         call sndexa
 
         ld hl,uftab             ; puntuacion segun el contador
@@ -138,8 +136,77 @@ ufohit: ld a,(ufon)
         ld e,(hl)
         inc hl
         ld d,(hl)
+        ld (ufsval),de          ; se queda un momento en pantalla,
+        push de                 ; que es la gracia del OVNI
+        ld a,(ufox)
+        rrca
+        rrca
+        rrca
+        and 1fh                 ; columna de texto = x / 8
+        ld (ufscol),a
+        ld a,UFSTIME
+        ld (ufstim),a
+        call ufsdrw
+        pop de
         call addsc2
         jp ufokil
+
+; -------------------------------------------------------------
+; ufsupd - cuenta atras de la puntuacion en pantalla
+; -------------------------------------------------------------
+ufsupd: ld a,(ufstim)
+        or a
+        ret z
+        dec a
+        ld (ufstim),a
+        ret nz
+; cae en ufsclr al agotarse
+
+; ufsclr - borra la puntuacion escribiendo espacios encima
+ufsclr: xor a
+        ld (ufstim),a
+        ld a,(ufscol)
+        ld e,a
+        ld d,UFOROW
+        ld b,3
+ufsc1:  push bc
+        xor a                   ; el glifo del espacio esta en blanco
+        call prtchr
+        pop bc
+        inc e
+        djnz ufsc1
+        ret
+
+; -------------------------------------------------------------
+; ufsdrw - escribe el valor de (ufsval) donde estaba el OVNI
+;
+; Son tres digitos con el cero de la izquierda en blanco, de forma
+; que 50 sale como " 50" y 300 como "300".
+; -------------------------------------------------------------
+ufsdrw: ld a,(ufscol)
+        ld e,a
+        ld d,UFOROW
+        ld a,(ufsval+1)
+        and 0fh
+        jr z,ufsd1
+        add a,CH0
+        jr ufsd2
+ufsd1:  ld a,CHSP
+ufsd2:  call prtchr
+        inc e
+        ld a,(ufsval)
+        rrca
+        rrca
+        rrca
+        rrca
+        and 0fh
+        add a,CH0
+        call prtchr
+        inc e
+        ld a,(ufsval)
+        and 0fh
+        add a,CH0
+        jp prtchr
 
 ; -------------------------------------------------------------
 ; ufshot - un disparo mas en la cuenta, modulo 15
@@ -193,3 +260,6 @@ ufotim: defw UFOWAIT            ; frames hasta la siguiente salida
 ufsid:  defb 0                  ; alterna el lado de entrada
 ufcnt:  defb 0                  ; disparos del jugador, modulo 15
 ufoct:  defb UFODIV             ; frames que faltan para avanzar
+ufsval: defw 0                  ; puntuacion que se esta mostrando
+ufscol: defb 0                  ; columna donde se muestra
+ufstim: defb 0                  ; frames que le quedan

@@ -51,25 +51,23 @@ ANPASO  equ (ANX0-ANXY)/ANSPD   ; pasos de cada tramo
 ; attmod - cicla las pantallas de atraccion
 ;          Devuelve Z si se pide salir, NZ para empezar partida
 ; -------------------------------------------------------------
+; Da UNA vuelta y devuelve; quien cicla es el bucle de maquina,
+; que intercala la demo entre vuelta y vuelta.
 attmod: call attttl
         ld b,60
         call attwt
         or a
-        jr nz,attend
+        ret nz
         call attani             ; el calamar arregla la Y
         or a
-        jr nz,attend
+        ret nz
         ld b,80
         call attwt
         or a
-        jr nz,attend
+        ret nz
         call attscr
         ld b,ATTIME
-        call attwt
-        or a
-        jr z,attmod
-attend: cp 2
-        ret
+        jp attwt
 
 ; -------------------------------------------------------------
 ; attwt - espera B frames vigilando el teclado

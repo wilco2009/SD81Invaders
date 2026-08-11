@@ -42,13 +42,23 @@ start:  di
         call ybuild             ; la Y del rotulo, derecha e invertida
 
 ; -------------------------------------------------------------
-; Ciclo de la maquina: atraccion, partida, y vuelta a empezar.
-; Ambas rutinas devuelven Z cuando el jugador pide salir.
+; Ciclo de la maquina: atraccion, demo, partida, y vuelta a
+; empezar. Las tres fases devuelven lo mismo en A:
+;   0 = termino sin que nadie pulsara nada
+;   1 = empezar partida de verdad
+;   2 = salir a BASIC
 ; -------------------------------------------------------------
-mach:   call attmod             ; titulo y tabla de puntuaciones
+mach:   call attmod             ; titulo, la Y y la tabla
+        or a
+        jr nz,machk
+        call demrun             ; la maquina juega sola
+        or a
+        jr z,mach
+machk:  cp 2
         jr z,quit
-        call newgam
+        call newgam             ; partida de verdad
         call gmloop
+        cp 2
         jr nz,mach
 
 quit:   call sndoff             ; callar AY y los tres hilos del PEG
@@ -98,8 +108,14 @@ newgam: call blclra             ; sin esto, una explosion viva al acabar
 ; instantanea de HFILE. El presupuesto es holgado: el enjambre
 ; solo repinta un alien por frame.
 ;
-; Devuelve Z si el jugador pide salir a BASIC, NZ si la partida
-; ha terminado y toca volver al modo de atraccion.
+; Sirve igual para la partida de verdad y para la demo: con
+; demoon a 1 son plmove y shfire los que dejan de leer el teclado
+; y preguntan a la IA. La demo no puede desincronizarse del juego
+; porque es el juego.
+;
+; Devuelve en A: 0 = partida terminada o demo agotada,
+;                1 = el jugador quiere jugar de verdad,
+;                2 = salir a BASIC.
 ; -------------------------------------------------------------
 gmloop: call waitvs
         call swstep             ; mueve un alien de la formacion
@@ -109,6 +125,7 @@ gmloop: call waitvs
         call exupd              ; destello del alien alcanzado
         call blupd              ; explosiones de proyectil
         call ufoupd             ; nave nodriza
+        call ufsupd             ; su puntuacion en pantalla
         call sndupd             ; marcha de fondo
 
         ld a,(swleft)           ; formacion despejada
@@ -121,21 +138,45 @@ gmloop: call waitvs
         ld a,(gover)            ; sin vidas
         or a
         jr nz,gmlend
-        ld a,KRQWE
+
+        ld a,(demoon)           ; la demo tiene un tope de tiempo
+        or a
+        jr z,gmlk
+        ld hl,(demtim)
+        dec hl
+        ld (demtim),hl
+        ld a,h
+        or l
+        jr nz,gmlk
+        xor a
+        ret                     ; se agoto la demo
+
+gmlk:   ld a,KRQWE
         in a,(KBPORT)
         and 1                   ; Q = salir
+        jr z,gmlq
+        ld a,(demoon)           ; durante la demo, disparo = jugar
+        or a
+        jr z,gmloop
+        call plfire
         jr nz,gmloop
-        ret                     ; Z: salir a BASIC
+        ld a,1
+        ret
+gmlq:   ld a,2
+        ret
 
 gmlinv: ld a,1
         ld (gover),a
-gmlend: call hiupd              ; puntuacion maxima
-        call govdrw             ; rotulo de fin de partida
+gmlend: ld a,(demoon)           ; lo que haga la maquina no puntua
+        or a
+        jr nz,gmle1
+        call hiupd
+gmle1:  call govdrw             ; rotulo de fin de partida
         call sndoff             ; silencio mientras se lee
         ld b,150
         call pause
-        or 1
-        ret                     ; NZ: volver a la atraccion
+        xor a
+        ret                     ; fin de partida
 
 ; -------------------------------------------------------------
 ; hiupd - se queda con la mejor puntuacion de la sesion
@@ -223,5 +264,6 @@ hiscor: defw 0
         include "ufo.inc.asm"
         include "sound.inc.asm"
         include "attract.inc.asm"
+        include "demo.inc.asm"
 
         end

@@ -3,10 +3,10 @@
 Réplica del arcade de Taito de 1978, escrita desde cero en Z80 para el
 [SD81 Booster](../SD81-Booster/README.md).
 
-Estado: **juego completo y rejugable**. Modo de atracción, enjambre, disparo,
-escudos destructibles, proyectiles alien, vidas, explosiones, oleadas sucesivas,
-OVNI y sonido. Falta la demo jugándose sola y afinar los bitmaps contra la ROM
-original.
+Estado: **completo**. Modo de atracción con la broma de la Y, la `SCORE ADVANCE
+TABLE` y la máquina jugando sola; enjambre, disparo, escudos destructibles,
+proyectiles alien, vidas, explosiones, oleadas sucesivas, OVNI con su puntuación
+y sonido. Todos los gráficos salen de la ROM original de Taito.
 
 ## Por qué el SD81 Booster
 
@@ -100,8 +100,20 @@ src/
 ├── explode.inc.asm   ← explosiones de alien y de nave
 ├── ufo.inc.asm       ← nave nodriza y su puntuación
 ├── sound.inc.asm     ← marcha en el AY, protocolo MCU y efectos PEG
-└── attract.inc.asm   ← título, la broma de la Y y SCORE ADVANCE TABLE
+├── attract.inc.asm   ← título, la broma de la Y y SCORE ADVANCE TABLE
+└── demo.inc.asm      ← la IA que juega sola en la atracción
 ```
+
+El ciclo de la máquina es **atracción → demo → partida → atracción**, y las tres
+fases devuelven lo mismo: 0 si nadie pulsó nada, 1 para empezar partida de
+verdad, 2 para salir a BASIC.
+
+La demo **no tiene bucle propio**: corre el mismo `gmloop` de la partida real
+con `demoon` a 1, y son `plmove` y `shfire` los que dejan de leer el teclado y
+preguntan a la IA. Así no puede desincronizarse del juego, porque *es* el juego.
+La IA se coloca bajo el alien vivo más bajo y dispara en cuanto tiene el cañón
+libre; no esquiva bombas, o sea que acaba muriendo — que es exactamente lo que
+hacía la demo del arcade.
 
 En el modo de atracción, el título sale con la **Y de PLAY del revés**: un
 calamar entra por la derecha por la línea del rótulo, se planta junto a la Y
@@ -234,15 +246,11 @@ si suenan altos o bajos, se ajustan en la tabla `mchton` de `sound.inc.asm`.
 
 ## Pendiente
 
-- La demo jugándose sola dentro del modo de atracción: necesita una IA mínima
-  para la nave (seguir la columna más baja, disparar, esquivar bombas).
-- El calamar de la animación del título se esfuma en x=238 en vez de salir
-  del todo por la derecha: el blitter escribe tres bytes por línea, así que
-  `x` no puede pasar de 239 sin invadir la línea siguiente. Saldría andando
-  añadiéndole recorte por la derecha.
-- Mostrar la puntuación del OVNI en el sitio donde se le derriba.
-- Contrastar todos los bitmaps con un volcado de la ROM de Taito.
-- Ajustar los periodos AY de la marcha al reloj real del interface.
+Nada del arcade original queda por hacer. Posibles refinamientos:
+
+- La IA de la demo no esquiva bombas: se limita a perseguir y disparar.
+- El destello del alien alcanzado es un solo fotograma fijo; podría animarse.
+- La explosión del OVNI reutiliza el destello del alien en vez de tener el suyo.
 
 ## Notas y supuestos
 

@@ -61,9 +61,12 @@ shclr:  ld a,(shon)
 ; -------------------------------------------------------------
 ; shfire - lanza un disparo si el boton esta pulsado
 ; -------------------------------------------------------------
-shfire: call plfire
+shfire: ld a,(demoon)
+        or a
+        jr nz,shf1              ; la maquina dispara siempre que puede
+        call plfire
         ret nz                  ; plfire devuelve Z si esta pulsado
-        ld a,(plx)
+shf1:   ld a,(plx)
         add a,PLW/2             ; centro de la nave
         ld (shx),a
         ld a,PLY-BULH
