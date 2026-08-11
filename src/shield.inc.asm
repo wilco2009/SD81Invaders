@@ -82,16 +82,26 @@ bsd1:   push bc
 ; importa: sprera solo quita pixeles que esten puestos, y lo que
 ; caiga en el vacio no hace nada.
 ; -------------------------------------------------------------
+; El desplazamiento horizontal del laser tampoco es cosmetico. Su
+; primera fila es dispersa ("#...#..#"), asi que si el pixel
+; tocado cae en uno de sus huecos NO se borra: el siguiente
+; disparo choca contra el mismo pixel, repite el mismo crater y la
+; barrera deja de recibir dano. Restando 4 en vez de 3, el pixel
+; tocado cae sobre el '#' de la columna 4 y el agujero progresa.
+; -------------------------------------------------------------
 bserod: ld hl,dmglas            ; impacto del laser del jugador
         ld a,(bimy)
+        ld d,a
+        ld a,(bimx)
+        sub 4
         jr bsero1
 bserob: ld hl,dmgbom            ; impacto de una bomba alien
         ld a,(bimy)
         sub 4
-bsero1: ld d,a
+        ld d,a
         ld a,(bimx)
         sub 3
-        ld e,a
+bsero1: ld e,a
         ld b,8
         jp sprera
 
