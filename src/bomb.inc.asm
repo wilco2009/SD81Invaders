@@ -226,7 +226,7 @@ bmimp:  ld a,(bimy)
         cp BASEY
         jp c,shclr              ; ha chocado con el disparo del jugador
         cp BASEY+BASH
-        jp c,bserod             ; escudo
+        jp c,bserob             ; escudo, con el crater de bomba
         cp PLY
         ret c                   ; hueco entre escudos y nave
         cp PLY+8

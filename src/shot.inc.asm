@@ -108,7 +108,7 @@ shimp:  ld a,(bimy)
         cp BASEY
         jp c,alhit              ; zona del enjambre
         cp BASEY+BASH
-        jp c,bserod             ; escudos
+        jp c,bserod             ; escudos, con el crater de laser
         jp alhit
 
 ; -------------------------------------------------------------

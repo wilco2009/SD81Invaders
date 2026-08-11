@@ -59,16 +59,27 @@ bsd1:   push bc
         ret
 
 ; -------------------------------------------------------------
-; bserod - abre un crater en el punto de impacto (bimx,bimy)
+; bserod / bserob - abren un crater en el punto de impacto
+;
+; El arcade no erosiona con una mancha cualquiera: usa una forma
+; fija distinta segun quien dispare, y por eso los destrozos del
+; original se reconocen a simple vista. bserod es el del laser del
+; jugador y bserob el de una bomba alien.
+;
+; El crater se centra en el punto de impacto, de modo que la mitad
+; cae fuera del escudo. No importa: sprera solo quita pixeles que
+; esten puestos, asi que lo que caiga en el vacio no hace nada.
 ; -------------------------------------------------------------
-bserod: ld a,(bimx)
-        dec a
+bserod: ld hl,dmglas            ; impacto del laser del jugador
+        jr bsero1
+bserob: ld hl,dmgbom            ; impacto de una bomba alien
+bsero1: ld a,(bimx)
+        sub 3
         ld e,a
         ld a,(bimy)
-        dec a
+        sub 4
         ld d,a
-        ld hl,crater
-        ld b,4
+        ld b,8
         jp sprera
 
 ; --- Escudo: 22x16 en celda de 24 px (2 bits de relleno) ---
@@ -94,11 +105,30 @@ bsspr:  defb 00001111b,11111111b,11000000b   ; ....##############....
         defb 11111000b,00000000b,11111100b   ; #####...........######
         defb 11111000b,00000000b,11111100b   ; #####...........######
 
-; --- Crater de erosion: 4x4 en celda de 16 px ---
-crater: defb 01100000b,00000000b
-        defb 11110000b,00000000b
-        defb 11110000b,00000000b
-        defb 01100000b,00000000b
+; --- Crateres de erosion, extraidos de la ROM de Taito ---
+;
+; ShotExploding, $1C91: 99 3C 7E 3D BC 3E 7C 99   (8x8)
+; AShotExplo,    $1CDC: 4A 15 BE 3F 5E 25         (6x8)
+;
+; En la ROM cada byte es una columna con el bit 7 arriba, que es
+; el arte del desensamblado girado 90 grados antihorario.
+dmglas: defb 10001001b,00000000b   ; #...#..#
+        defb 00100010b,00000000b   ; ..#...#.
+        defb 01111110b,00000000b   ; .######.
+        defb 11111111b,00000000b   ; ########
+        defb 11111111b,00000000b   ; ########
+        defb 01111110b,00000000b   ; .######.
+        defb 00100100b,00000000b   ; ..#..#..
+        defb 10010001b,00000000b   ; #..#...#
+
+dmgbom: defb 00100000b,00000000b   ; ..#...
+        defb 10001000b,00000000b   ; #...#.
+        defb 00110100b,00000000b   ; ..##.#
+        defb 01111000b,00000000b   ; .####.
+        defb 10111000b,00000000b   ; #.###.
+        defb 01111100b,00000000b   ; .#####
+        defb 10111000b,00000000b   ; #.###.
+        defb 01010100b,00000000b   ; .#.#.#
 
 ; --- variables ---
 bssrc:  defw 0                  ; puntero de lectura del escudo
