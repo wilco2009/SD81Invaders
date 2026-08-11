@@ -14,7 +14,17 @@
 
 UFOW    equ 16                  ; ancho del sprite
 UFOH    equ 7                   ; alto
-UFOSPD  equ 2                   ; px por frame
+UFOSPD  equ 1                   ; px por movimiento
+UFODIV  equ 1                   ; se mueve uno de cada N frames
+;
+; A 2 px por frame cruzaba el campo en 2,2 s, demasiado rapido: el
+; OVNI del arcade es una deriva que da tiempo a apuntar. A 1 px
+; por frame son 224 frames, unos 4,5 s.
+;
+; El divisor esta para poder bajar de 1 px por frame, que es el
+; minimo entero. Si se toca, hay que ajustar con el las vueltas
+; del efecto de sonido en datufo: el zumbido tiene que durar
+; aproximadamente lo mismo que el cruce.
 UFOMIN  equ 9                   ; aliens minimos para que aparezca
 UFOWAIT equ 1200                ; frames entre apariciones (~24 s)
 
@@ -35,6 +45,11 @@ ufoini: xor a
 ufoupd: ld a,(ufon)
         or a
         jr z,ufowt
+
+        ld hl,ufoct             ; solo avanza uno de cada UFODIV
+        dec (hl)
+        ret nz
+        ld (hl),UFODIV
 
         call ufoera             ; borrar donde estaba
         ld a,(ufox)
@@ -79,6 +94,8 @@ ufsder: ld a,FLDR-UFOW          ; entra por la derecha
         ld (ufox),a
         ld a,-UFOSPD
 ufson:  ld (ufodir),a
+        ld a,UFODIV
+        ld (ufoct),a
         ld a,1
         ld (ufon),a
         call sndufo
@@ -175,3 +192,4 @@ ufodir: defb UFOSPD             ; sentido de marcha
 ufotim: defw UFOWAIT            ; frames hasta la siguiente salida
 ufsid:  defb 0                  ; alterna el lado de entrada
 ufcnt:  defb 0                  ; disparos del jugador, modulo 15
+ufoct:  defb UFODIV             ; frames que faltan para avanzar

@@ -164,13 +164,17 @@ mchtab: defb 41,30
         defb 0,6
 
 ; Los cuatro tonos graves descendentes, como periodo del AY
-; (byte bajo, byte alto). Calculados para un reloj de AY de
-; ~1,625 MHz: periodo = reloj / (16 * frecuencia). Si suenan altos
-; o bajos, es aqui donde se ajusta.
-mchton: defb 0b3h,002h          ; ~147 Hz
-        defb 0dah,002h          ; ~139 Hz
-        defb 007h,003h          ; ~131 Hz
-        defb 039h,003h          ; ~123 Hz
+; (byte bajo, byte alto). Reloj del AY 1,625 MHz, de modo que
+; periodo = 1625000 / (16 * frecuencia).
+;
+; Bajados media octava respecto a la primera version: media octava
+; es dividir la frecuencia por raiz de dos, o sea multiplicar el
+; periodo por 1,4142. El registro de periodo son 12 bits, asi que
+; el tope es 4095 y aqui sobra sitio de sobra.
+mchton: defb 0d1h,003h          ; 977  -> ~104 Hz
+        defb 008h,004h          ; 1032 ->  ~98 Hz
+        defb 048h,004h          ; 1096 ->  ~93 Hz
+        defb 08fh,004h          ; 1167 ->  ~87 Hz
 
 ; =============================================================
 ; Efectos, sobre el PEG
@@ -309,8 +313,12 @@ datlas: defb 01ch,007h, 000h,001h, 00ch,008h, 01eh,020h
         defb 012h,021h, 000h,041h, 00ch,090h, 00ah,030h
         defb 0fch,081h, 000h,008h, 010h,0a0h
 
-; --- OVNI: canal B, dos tonos alternando 80 veces (V2) ---
-datufo: defb 01ch,007h, 00bh,009h, 050h,022h, 001h,003h
+; --- OVNI: canal B, dos tonos alternando 70 veces (V2) ---
+; Cada vuelta son 70 ms, o sea 4,9 s en total, algo por encima de
+; los 4,5 s que tarda el OVNI en cruzar. Tiene que cubrir el cruce
+; entero o se quedaria mudo a media travesia; pasarse no importa,
+; porque al retirarlo se le lanza el silenciador.
+datufo: defb 01ch,007h, 00bh,009h, 046h,022h, 001h,003h
         defb 03ch,002h, 023h,090h, 001h,003h, 06eh,002h
         defb 023h,090h, 0f9h,082h, 000h,009h, 010h,0a0h
 
