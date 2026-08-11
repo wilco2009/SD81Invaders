@@ -66,19 +66,32 @@ bsd1:   push bc
 ; original se reconocen a simple vista. bserod es el del laser del
 ; jugador y bserob el de una bomba alien.
 ;
-; El crater se centra en el punto de impacto, de modo que la mitad
-; cae fuera del escudo. No importa: sprera solo quita pixeles que
-; esten puestos, asi que lo que caiga en el vacio no hace nada.
+; Los dos NO se colocan igual, porque no llegan igual.
+;
+; bimy es siempre el pixel mas alto que encontro el sondeo. Para
+; el laser, que sube, eso es lo mas hondo que llego a penetrar: si
+; ademas se centrara el crater ahi, se comeria cuatro filas por
+; encima de donde el disparo llego de verdad. Por eso cuelga del
+; punto de impacto hacia abajo, mordiendo el escudo por su borde
+; inferior.
+;
+; La bomba baja y bimy es su primer roce con el borde de arriba,
+; asi que ahi si se centra.
+;
+; La mitad del crater cae fuera del escudo en ambos casos. No
+; importa: sprera solo quita pixeles que esten puestos, y lo que
+; caiga en el vacio no hace nada.
 ; -------------------------------------------------------------
 bserod: ld hl,dmglas            ; impacto del laser del jugador
+        ld a,(bimy)
         jr bsero1
 bserob: ld hl,dmgbom            ; impacto de una bomba alien
-bsero1: ld a,(bimx)
-        sub 3
-        ld e,a
         ld a,(bimy)
         sub 4
-        ld d,a
+bsero1: ld d,a
+        ld a,(bimx)
+        sub 3
+        ld e,a
         ld b,8
         jp sprera
 

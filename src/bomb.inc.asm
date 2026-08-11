@@ -239,13 +239,18 @@ bmimp:  ld a,(bimy)
 ; La explosion se dibuja encima de la linea verde y, al retirarla,
 ; se lleva los pixeles que tapaba: de ahi salen las muescas del
 ; original. No hace falta erosionar aparte.
+;
+; Se apoya sobre la linea, no centrada en ella: restando BMH-1 la
+; ultima fila del sprite queda justo encima del suelo, que es la
+; unica que llega a morderlo. Centrandola, la explosion se hundia
+; media altura por debajo y el mordisco salia demasiado profundo.
 ; -------------------------------------------------------------
 bmgnd:  ld hl,dmgbom
         ld a,(bimx)
         sub 3
         ld e,a
         ld a,(bimy)
-        sub 4
+        sub 7                   ; ultima fila del sprite sobre la linea
         ld d,a
         jp blseta
 
