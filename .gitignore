@@ -1,0 +1,8 @@
+# Salida del ensamblador
+src/zout/
+
+# Binario generado
+INVADERS.BIN
+
+# Configuracion local de la herramienta
+.claude/settings.local.json

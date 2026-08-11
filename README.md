@@ -3,9 +3,10 @@
 Réplica del arcade de Taito de 1978, escrita desde cero en Z80 para el
 [SD81 Booster](../SD81-Booster/README.md).
 
-Estado: **esqueleto funcional**. Vídeo, sincronismo, blitter y marcha del
-enjambre están montados y el juego arranca; disparos, escudos, colisiones,
-OVNI y sonido son los siguientes pasos.
+Estado: **jugable en lo esencial y verificado en emulador**. Vídeo, sincronismo,
+blitter, marcha del enjambre, disparo, escudos con erosión, colisiones y
+puntuación funcionan. Proyectiles alien, vidas, OVNI y sonido son los
+siguientes pasos.
 
 ## Por qué el SD81 Booster
 
@@ -42,15 +43,24 @@ EightyOne-CrossPlatform con emulación SD81) y desde BASIC:
 
 ```basic
 10 FAST
-20 LOAD FAST 'INVADERS.BIN' CODE 30000
-30 RAND USR 30000
-40 SLOW
+20 LOAD THEN CLEAR 29999
+30 LOAD FAST 'INVADERS.BIN' CODE 30000
+40 RAND USR 30000
+50 SLOW
 ```
 
-La línea `10 FAST` **no es opcional**: en `SLOW` el generador de NMI del ZX81
-sigue activo, el `DI` del juego no lo puede parar (la NMI es no enmascarable) y
-el temporizado del bucle se va al traste. La dirección de carga y la de salto
-son la misma, 30000 — el binario es un blob crudo sin cabecera.
+(el cargador está también en [invaders.b81](invaders.b81))
+
+Dos detalles que no son opcionales:
+
+- **`FAST` antes del `USR`**: en `SLOW` el generador de NMI del ZX81 sigue
+  activo, el `DI` del juego no lo puede parar —la NMI es no enmascarable— y el
+  temporizado del bucle se va al traste.
+- **`CLEAR 29999`** baja RAMTOP por debajo del código para que el BASIC no lo
+  pise. Si se cambia el `org`, hay que cambiar el `CLEAR` con él.
+
+La dirección de carga y la de salto son la misma, 30000 — el binario es un blob
+crudo sin cabecera, y `start:` es lo primero tras el `org`.
 
 Requiere un core FPGA con soporte de `POKE 2057` (doble buffer).
 
@@ -83,11 +93,14 @@ src/
 ├── text.inc.asm      ← texto con los glifos de la ROM ($1E00)
 ├── sprites.inc.asm   ← bitmaps del arcade y tablas por fila
 ├── swarm.inc.asm     ← los 55 aliens: barrido, oleada, rebote y descenso
-└── player.inc.asm    ← nave y lectura de controles
+├── player.inc.asm    ← nave y lectura de controles
+├── shot.inc.asm      ← disparo del jugador y reparto de impactos
+└── shield.inc.asm    ← los cuatro escudos y su erosión
 ```
 
-El binario ocupa unos 1,2 KB y se carga en 30000 (`$7530`), muy por debajo de
-`$8000`, donde empieza la pantalla.
+El binario ocupa 1839 bytes en `$7530`–`$7C5F`, con 929 bytes de margen hasta
+`$8000`, donde empieza el bitmap de pantalla. **Ese margen es el presupuesto
+real que queda**: al ampliarlo habrá que bajar el `org` y el `CLEAR` a la vez.
 
 ## Decisiones de fidelidad
 
