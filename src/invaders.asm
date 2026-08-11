@@ -39,6 +39,7 @@
 start:  di
         call vinit              ; modo de video y doble buffer
         call sndini             ; volcar los efectos al PEG
+        call ybuild             ; la Y del rotulo, derecha e invertida
 
 ; -------------------------------------------------------------
 ; Ciclo de la maquina: atraccion, partida, y vuelta a empezar.
