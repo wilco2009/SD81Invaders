@@ -231,10 +231,17 @@ si suenan altos o bajos, se ajustan en la tabla `mchton` de `sound.inc.asm`.
 
 ## Notas y supuestos
 
-- Los bitmaps de `sprites.inc.asm` están **transcritos a mano** a partir de los
-  gráficos del arcade. Se han verificado decodificando el binario ensamblado,
-  pero conviene contrastarlos píxel a píxel con un volcado de la ROM de Taito
-  antes de dar el juego por terminado.
+- Los bitmaps de `sprites.inc.asm` y el escudo están **extraídos de la ROM
+  original de Taito** (romset MAME `invaders`) y verificados píxel a píxel
+  contra ella. El vídeo del arcade va girado 90°, así que en la ROM cada byte
+  es una columna de 8 píxeles con el bit 7 arriba; aquí se guardan por filas.
+  Direcciones: `$1C00` pulpo A, `$1C30` pulpo B, `$1C10` cangrejo A, `$1C40`
+  cangrejo B, `$1C20` calamar A, `$1C50` calamar B, `$1C60` nave, `$1D68` OVNI
+  y `$1D20` escudo.
+- **Los cráteres de las barreras siguen sin ser los del original**: el arcade
+  usa una forma fija distinta para el impacto del láser del jugador y para el
+  de una bomba alien, y aquí se usa el mismo cráter de 4×4 para ambos. No he
+  logrado localizar esos dos sprites en la ROM.
 - El texto usa los glifos de la ROM del ZX81 en `$1E00` como andamiaje. La
   tipografía propia del arcade se puede sustituir en `text.inc.asm` sin tocar
   nada más.
