@@ -16,11 +16,20 @@
 
 NBOMB   equ 3                   ; bombas simultaneas
 BMSZ    equ 6                   ; bytes por ranura
-BMSPD   equ 4                   ; px por frame
+BMSPD   equ 2                   ; px por frame
 BMH     equ 7                   ; alto del proyectil
 BMW     equ 3                   ; ancho
 BMBOT   equ 184                 ; tope inferior de seguridad
-BMRELO  equ 60                  ; frames de recarga
+BMRELO  equ 80                  ; frames de recarga
+;
+; A 4 px por frame el proyectil cubria el hueco hasta la nave en
+; unos 18 frames: un tercio de segundo para reaccionar. El arcade
+; daba cerca de un segundo. Con 2 px son ~36 frames, que con el
+; hueco ya recuperado (SWDY) se queda en el orden del original.
+;
+; bmchk sondea justo BMSPD lineas de cabeza, asi que sigue siendo
+; exacto al cambiar la velocidad: la franja que barre el proyectil
+; entre frame y frame es exactamente la que se comprueba.
 
 ; Campos de la ranura (IX): 0=activa 1=x 2=y 3=tipo 4=frame 5=recarga
 

@@ -132,7 +132,26 @@ todavía sin mover, borrar por rectángulo le arrancaría media cabeza.
 
 **Geometría.** El campo mantiene la escala horizontal 1:1 del arcade (224 px,
 x 16..239) y comprime el eje vertical a las 192 líneas disponibles conservando
-el orden y las proporciones de las bandas.
+el orden de las bandas.
+
+Esa compresión de 256 a 192 tiene una consecuencia que no es obvia. Los 64 px
+que faltan no se pueden quitar de los sprites, ni de los escudos, ni del número
+de filas: todos tienen altura mínima fija. Así que se los come entero **el hueco
+entre el enjambre y la nave**, justo el espacio que da tiempo de reacción, y el
+juego sale bastante más difícil que el original sin que nada lo delate.
+
+La solución es apretar las filas del enjambre: con `SWDY` a 12 px en vez de 16,
+la formación ocupa 56 px en lugar de 72 y esos 16 px vuelven al hueco.
+
+| | Con `SWDY`=16 | Con `SWDY`=12 | Arcade |
+|---|---|---|---|
+| Hueco hasta escudos | 32 px (17%) | 48 px (25%) | ~25% |
+| Hueco hasta la nave | 56 px (29%) | 72 px (38%) | ~34% |
+| Bajadas hasta invasión | 7 | 9 | |
+
+**Velocidad de los proyectiles.** A 4 px por frame una bomba cubría el hueco en
+0,28 s. El arcade daba cerca de un segundo. Con `BMSPD` a 2 y el hueco ya
+recuperado son 0,72 s, en el orden del original.
 
 **Color.** El arcade no tenía color: llevaba una lámina de acetato con franjas.
 Eso mapea exactamente a filas de atributos 8×8 — rojo en la banda del OVNI,

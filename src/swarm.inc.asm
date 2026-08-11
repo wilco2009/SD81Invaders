@@ -20,12 +20,28 @@
 SWCOLS  equ 11                  ; columnas de la formacion
 SWROWS  equ 5                   ; filas
 SWDX    equ 16                  ; separacion horizontal
-SWDY    equ 16                  ; separacion vertical
+SWDY    equ 12                  ; separacion vertical
+;
+; SWDY es 12 y no 16 por la compresion vertical. El arcade era una
+; pantalla de 224x256 en vertical y aqui solo hay 192 lineas: los
+; 64 px que faltan no se pueden quitar de los sprites, ni de los
+; escudos, ni del numero de filas, asi que se los comia enteros el
+; hueco entre el enjambre y la nave - justo el espacio que da
+; tiempo de reaccion. Apretando las filas 4 px se recupera ese
+; hueco y el reparto vuelve a las proporciones del original.
+;
+; OJO: la multiplicacion por SWDY en salofs esta desplegada a mano
+; en desplazamientos. Si se cambia esta constante hay que cambiar
+; alli tambien.
 SWX0    equ 32                  ; x inicial del enjambre
 SWY0    equ 32                  ; y de la fila superior
 SWADV  equ 2                   ; avance horizontal por pasada
 SWDROP  equ 8                   ; descenso al tocar el borde
 SWNUM   equ SWROWS*SWCOLS       ; 55
+
+; y del enjambre a la que se considera invasion: la fila de abajo
+; alcanza la altura de la nave
+SWYMAX  equ PLY-(SWROWS-1)*SWDY-8
 
 ; -------------------------------------------------------------
 ; swinit - formacion completa en su posicion de salida
@@ -175,16 +191,17 @@ salofs: ld a,(ccol)
         add a,a
         add a,a
         add a,a
-        add a,a                 ; col * 16
+        add a,a                 ; col * 16 = SWDX
         ld c,a
         ld a,SWROWS-1
         ld hl,crank
         sub (hl)
         ld (crow),a
-        add a,a
-        add a,a
-        add a,a
-        add a,a                 ; row * 16
+        add a,a                 ; 2f
+        add a,a                 ; 4f
+        ld b,a
+        add a,a                 ; 8f
+        add a,b                 ; row * 12 = SWDY
         ld b,a
         ret
 
