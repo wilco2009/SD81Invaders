@@ -38,7 +38,7 @@ swinit: ld a,SWX0
         ld (opx),a
         ld a,SWX0+SWADV
         ld (swx),a
-        ld a,SWY0
+        ld a,(swy0v)            ; cada oleada empieza mas abajo
         ld (opy),a
         ld (swy),a
         ld a,SWADV
@@ -362,6 +362,35 @@ spmove: ld a,(swx)              ; --- pasada normal ---
         ret
 
 ; -------------------------------------------------------------
+; nxtwav - formacion despejada: siguiente oleada
+;
+; Como en el arcade, los escudos se reponen enteros y la nueva
+; formacion arranca una fila mas abajo, hasta un tope. Ese
+; descenso es toda la curva de dificultad del original: no hay
+; nada que se mueva mas rapido, es que hay menos sitio.
+; -------------------------------------------------------------
+nxtwav: ld b,40
+        call pause
+        call shclr
+        call bmclr
+        call exclr
+
+        ld d,16                 ; limpiar la zona de juego, dejando
+        ld b,GNDY-16            ; cabecera, suelo y vidas
+        call clrbnd
+
+        ld hl,wave
+        inc (hl)
+        ld a,(swy0v)
+        cp SWY0+SWDROP*4        ; tope de descenso
+        jr nc,nwv1
+        add a,SWDROP
+        ld (swy0v),a
+nwv1:   call bsdraw             ; escudos nuevos
+        call swinit
+        jp pldrw
+
+; -------------------------------------------------------------
 ; alhit - busca el alien vivo que ocupa el punto de impacto
 ;         (bimx,bimy) y lo elimina. Si no hay ninguno, no hace
 ;         nada: el disparo se pierde igual.
@@ -463,6 +492,8 @@ ahk1:   call salspr
         ld hl,swleft
         dec (hl)                ; una menos: el barrido acelera
 
+        call exset              ; destello donde estaba
+
         ld hl,alpts             ; puntuacion de la fila
         ld a,(crow)
         ld e,a
@@ -502,6 +533,8 @@ swcol:  defb 0                  ; 0..10
 swfrm:  defb 1                  ; fotograma de la pasada actual
 swedge: defb 0                  ; 1 = alguien toco el borde
 swleft: defb SWNUM              ; aliens vivos
+swy0v:  defb SWY0               ; y de salida de la oleada en curso
+wave:   defb 1                  ; numero de oleada
 swaliv: defs SWNUM              ; 1 = vivo, indexado rank*11+col
 
 ; --- scratch del alien en curso ---

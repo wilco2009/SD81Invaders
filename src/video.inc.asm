@@ -274,6 +274,23 @@ ptm2:   and (hl)
         ret
 
 ; -------------------------------------------------------------
+; clrbnd - borra B lineas completas de pantalla desde la linea D
+; -------------------------------------------------------------
+clrbnd: push bc
+        push de
+        ld e,0
+        call pixad
+        ld b,32
+cbn1:   ld (hl),0
+        inc l
+        djnz cbn1
+        pop de
+        pop bc
+        inc d
+        djnz clrbnd
+        ret
+
+; -------------------------------------------------------------
 ; hline - linea horizontal solida
 ;   D = y, E = columna inicial en bytes, B = ancho en bytes
 ; -------------------------------------------------------------

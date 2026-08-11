@@ -57,11 +57,14 @@ main:   call waitvs
         call plmove             ; nave del jugador
         call shupd              ; disparo, impactos y erosion
         call bmupd              ; proyectiles alien
+        call exupd              ; destello del alien alcanzado
 
         ; TODO: OVNI y su puntuacion segun el numero de disparos
-        ; TODO: explosion de alien y de nave
-        ; TODO: oleadas sucesivas
         ; TODO: sonido - marcha de fondo en un hilo PEG
+
+        ld a,(swleft)           ; formacion despejada
+        or a
+        call z,nxtwav
 
         ld a,(swy)              ; el enjambre ha llegado abajo
         cp SWYMAX
@@ -154,5 +157,6 @@ hiscor: defw 0
         include "shot.inc.asm"
         include "shield.inc.asm"
         include "bomb.inc.asm"
+        include "explode.inc.asm"
 
         end
