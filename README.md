@@ -104,9 +104,15 @@ src/
 ```
 
 En el modo de atracción, el título sale con la **Y de PLAY del revés**: un
-invasor entra, carga con ella, se la lleva fuera de pantalla y vuelve con ella
-del derecho para dejarla en su sitio. Estaba ya en el original del 78 y es el
-primer *attract mode* de la historia con sentido del humor.
+calamar entra por la derecha por la línea del rótulo, se planta junto a la Y
+ofensiva, da media vuelta y se la lleva a rastras por donde vino; vuelve a
+salir con ella ya del derecho, la deja en su sitio y se esfuma. Estaba ya en el
+original del 78 y es el primer *attract mode* de la historia con sentido del
+humor.
+
+No hace falta borrar ni repintar la Y del rótulo en los relevos: el calamar la
+lleva en `x-8`, que en los extremos de cada tramo cae clavado en su sitio. La Y
+que arrastra es literalmente la que estaba escrita.
 
 El ciclo de la máquina es **atracción → partida → atracción**, y ambas fases
 devuelven `Z` cuando el jugador pide salir. Hasta que hubo modo de atracción no
@@ -230,8 +236,10 @@ si suenan altos o bajos, se ajustan en la tabla `mchton` de `sound.inc.asm`.
 
 - La demo jugándose sola dentro del modo de atracción: necesita una IA mínima
   para la nave (seguir la columna más baja, disparar, esquivar bombas).
-- El invasor de la animación del título desaparece de golpe en el borde
-  izquierdo en vez de salir andando, porque el blitter no admite x negativa.
+- El calamar de la animación del título se esfuma en x=238 en vez de salir
+  del todo por la derecha: el blitter escribe tres bytes por línea, así que
+  `x` no puede pasar de 239 sin invadir la línea siguiente. Saldría andando
+  añadiéndole recorte por la derecha.
 - Mostrar la puntuación del OVNI en el sitio donde se le derriba.
 - Contrastar todos los bitmaps con un volcado de la ROM de Taito.
 - Ajustar los periodos AY de la marcha al reloj real del interface.

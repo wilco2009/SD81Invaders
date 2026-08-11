@@ -18,11 +18,13 @@ ATTTX   equ 13                  ; columna de texto de la tabla
 
 ; --- La broma de la Y ---
 ;
-; El titulo aparece con la Y de PLAY del reves. Un invasor entra
-; por la derecha, carga con la Y ofensiva, se la lleva fuera de
-; pantalla y vuelve con ella del derecho para dejarla en su sitio.
-; Es el primer modo de atraccion de la historia con sentido del
-; humor, y estaba ya en el original del 78.
+; El titulo aparece con la Y de PLAY del reves. Un calamar entra
+; por la derecha por la misma linea del rotulo, se planta justo al
+; lado de la Y ofensiva, da media vuelta y se la lleva a rastras
+; por donde vino. Vuelve a salir por la derecha con la Y ya del
+; derecho, la deja en su sitio y se esfuma. Es el primer modo de
+; atraccion de la historia con sentido del humor, y estaba ya en
+; el original del 78.
 ;
 ; El glifo de la Y no se guarda como dato: se copia de la tabla de
 ; caracteres de la ROM del ZX81 y se invierte leyendo sus ocho
@@ -30,10 +32,13 @@ ATTTX   equ 13                  ; columna de texto de la tabla
 YCODE   equ CHA+'Y'-'A'         ; codigo ZX81 de la Y
 YHOMEX  equ 17*8                ; sitio de la Y dentro del rotulo
 YHOMEY  equ 6*8
-ANIY    equ 40                  ; fila por la que camina el invasor
+ANIY    equ YHOMEY              ; camina por la linea del rotulo
 ANSPD   equ 2                   ; px por frame
-ANPASO  equ (232-134)/ANSPD     ; pasos de entrada y de salida
-ANCRUZ  equ 134/ANSPD           ; pasos hasta salir de pantalla
+ANX0    equ 238                 ; por donde entra y sale
+ANXY    equ YHOMEX+8            ; justo a la derecha de la Y
+ANPASO  equ (ANX0-ANXY)/ANSPD   ; pasos de cada tramo
+ANYOFS  equ 8                   ; la Y va pegada a su izquierda
+ANANIM  equ 8                   ; frames por fotograma del calamar
 
 ; -------------------------------------------------------------
 ; attmod - cicla las pantallas de atraccion
@@ -162,67 +167,61 @@ yb2:    ld a,(hl)
         djnz yb2
         ret
 
-; anyinv / anydrw - la Y del rotulo, invertida o derecha
+; anyinv - la Y del rotulo, del reves
 anyinv: ld hl,yinv
-        jr any1
-anydrw: ld hl,yspr
-any1:   ld e,YHOMEX
+        ld e,YHOMEX
         ld d,YHOMEY
         ld b,8
         jp sprdrw
 
-; anyerm - quitar la Y invertida del rotulo
-anyerm: ld hl,yinv
-        ld e,YHOMEX
-        ld d,YHOMEY
-        ld b,8
-        jp sprera
-
 ; -------------------------------------------------------------
 ; attani - la secuencia completa
 ;          Devuelve como attwt: 0 termino, 1 disparo, 2 salir
+;
+; No hace falta borrar ni volver a pintar la Y del rotulo en los
+; relevos: el calamar la recoge y la deja en x = anx-8, que en los
+; extremos de cada tramo cae clavado en YHOMEX. La Y que arrastra
+; es literalmente la que estaba escrita.
 ; -------------------------------------------------------------
-attani: ld a,232                ; entra por la derecha
+attani: ld a,ANX0               ; entra por la derecha
         ld (anx),a
         ld a,-ANSPD
         ld (anstp),a
         xor a
         ld (ancar),a
-        ld b,ANPASO
+        ld (anfrm),a
+        ld a,ANANIM
+        ld (ancnt),a
+        ld b,ANPASO             ; hasta plantarse al lado de la Y
         call anwalk
         or a
         ret nz
 
-        call anyerm             ; carga con la Y ofensiva
-        ld hl,yinv
+        ld hl,yinv              ; carga con ella y da media vuelta
         ld (anysp),hl
         ld a,1
         ld (ancar),a
-        ld b,ANCRUZ             ; se la lleva por la izquierda
+        ld a,ANSPD
+        ld (anstp),a
+        ld b,ANPASO             ; se la lleva por donde vino
         call anwalk
         or a
         ret nz
         call anera
 
-        xor a                   ; vuelve con ella del derecho
+        ld a,ANX0               ; reaparece con la Y del derecho
         ld (anx),a
         ld hl,yspr
         ld (anysp),hl
-        ld a,ANSPD
+        ld a,-ANSPD
         ld (anstp),a
-        ld b,ANCRUZ
+        ld b,ANPASO             ; hasta dejarla en su sitio
         call anwalk
         or a
         ret nz
 
-        call anera              ; la deja en su sitio
-        xor a
-        ld (ancar),a
-        call anydrw
-        ld b,ANPASO             ; y se marcha por la derecha
-        call anwalk
-        or a
-        ret nz
+        xor a                   ; la suelta y se esfuma: anera ya
+        ld (ancar),a            ; solo se lleva al calamar
         call anera
         xor a
         ret
@@ -231,12 +230,19 @@ attani: ld a,232                ; entra por la derecha
 ; anwalk - B pasos del invasor. Devuelve como attwt.
 ; -------------------------------------------------------------
 anwalk: push bc
-        call anera
+        call anera              ; borra con el fotograma con el que pinto
         ld a,(anx)
         ld hl,anstp
         add a,(hl)
         ld (anx),a
-        call andrw
+        ld hl,ancnt             ; el calamar anima al caminar
+        dec (hl)
+        jr nz,anw1
+        ld (hl),ANANIM
+        ld a,(anfrm)
+        xor 1
+        ld (anfrm),a
+anw1:   call andrw
         call anpoll
         pop bc
         or a
@@ -260,8 +266,17 @@ anp1:   ld a,1
 anp2:   ld a,2
         ret
 
-; andrw / anera - el invasor y, si carga con ella, la Y
-andrw:  ld hl,crba
+; anspr - HL = fotograma actual del calamar
+anspr:  ld hl,sqda
+        ld a,(anfrm)
+        or a
+        ret z
+        ld de,16
+        add hl,de
+        ret
+
+; andrw / anera - el calamar y, si carga con ella, la Y
+andrw:  call anspr
         ld a,(anx)
         ld e,a
         ld d,ANIY
@@ -272,13 +287,13 @@ andrw:  ld hl,crba
         ret z
         ld hl,(anysp)
         ld a,(anx)
-        add a,2
+        sub ANYOFS
         ld e,a
         ld d,YHOMEY
         ld b,8
         jp sprdrw
 
-anera:  ld hl,crba
+anera:  call anspr
         ld a,(anx)
         ld e,a
         ld d,ANIY
@@ -289,17 +304,19 @@ anera:  ld hl,crba
         ret z
         ld hl,(anysp)
         ld a,(anx)
-        add a,2
+        sub ANYOFS
         ld e,a
         ld d,YHOMEY
         ld b,8
         jp sprera
 
 ; --- estado de la animacion ---
-anx:    defb 0                  ; x del invasor
+anx:    defb 0                  ; x del calamar
 anstp:  defb 0                  ; paso, con signo
-ancar:  defb 0                  ; 1 = lleva la Y encima
+ancar:  defb 0                  ; 1 = lleva la Y a rastras
 anysp:  defw 0                  ; sprite de la Y que lleva
+anfrm:  defb 0                  ; fotograma del calamar
+ancnt:  defb ANANIM             ; frames para el siguiente
 yspr:   defs 16                 ; glifo de la Y, derecho
 yinv:   defs 16                 ; y del reves
 
