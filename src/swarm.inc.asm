@@ -386,7 +386,8 @@ spmove: ld a,(swx)              ; --- pasada normal ---
 ; descenso es toda la curva de dificultad del original: no hay
 ; nada que se mueva mas rapido, es que hay menos sitio.
 ; -------------------------------------------------------------
-nxtwav: ld b,40
+nxtwav: call mchoff             ; sin esto la nota se queda sonando
+        ld b,40
         call pause
         call shclr
         call bmclr

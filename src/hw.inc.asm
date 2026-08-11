@@ -24,6 +24,15 @@ VSPORT  equ 0afh            ; bit 0 = VSYNC
 MCUDAT  equ 0a7h            ; puerto de datos del MCU
 MCUCTL  equ 0afh            ; control del MCU: bit 7 = reloj (mismo que VSPORT)
 
+; --- Los dos AY hardware, compatibles ZonX-81 ---
+; A7 hace de linea BC1: A7=1 selecciona registro, A7=0 escribe dato.
+; A3 elige chip: 1 = chip A (ZonX-81 estandar), 0 = chip B (SD81).
+; El PEG no usa ninguno de los dos: es un tercer AY dentro del MCU.
+AYALAT  equ 0dfh            ; chip A - seleccion de registro
+AYADAT  equ 01fh            ; chip A - escritura de dato
+AYBLAT  equ 0c6h            ; chip B - seleccion de registro
+AYBDAT  equ 006h            ; chip B - escritura de dato
+
 ; --- Comandos del MCU ---
 CMDLPEG equ 40              ; LOAD_PEG:  1B dir + 1B long + datos
 CMDPPEG equ 41              ; PLAY_PEG:  1B hilo + 1B dir

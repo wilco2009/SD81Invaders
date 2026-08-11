@@ -170,23 +170,35 @@ está reproducida en `ufo.inc.asm`.
 
 ## Sonido
 
-El PEG del interface es una máquina virtual con acceso directo a los registros
-del AY y tres hilos paralelos. Una vez lanzado un efecto **no consume ni un
-ciclo del Z80**, así que el sonido sale prácticamente gratis dentro del
-presupuesto de frame. Los efectos se vuelcan una sola vez al arrancar y después
-solo se envían tres bytes por disparo.
+El interface tiene **tres generadores independientes**: dos chips AY por
+hardware (compatibles ZonX-81) y el PEG, que es un tercer AY sintetizado dentro
+del MCU. No comparten registros, así que se pueden usar a la vez sin pisarse.
 
-| Hilo | Uso |
-|------|-----|
-| 0 | Marcha de fondo |
-| 1 | Disparo del jugador y OVNI |
-| 2 | Explosiones |
+| Generador | Uso |
+|---|---|
+| AY chip A (`$DF`/`$1F`) | Marcha de fondo |
+| PEG hilo 0 | Disparo del jugador |
+| PEG hilo 1 | OVNI |
+| PEG hilo 2 | Explosiones |
 
-Con solo tres hilos, disparar corta el zumbido del OVNI. Es la única concesión.
+**La marcha va al AY hardware y no al PEG**, y el reparto no es arbitrario: son
+cuatro tonos fijos, sin envolvente ni ruido, con el ritmo marcado desde el bucle
+de frame — justo lo que no necesita una máquina virtual. Dejarla ahí libera los
+tres hilos del PEG para los efectos, que sí son barridos y fundidos, y con ello
+disparo y OVNI dejan de cortarse.
+
+Un efecto PEG, una vez lanzado, **no consume ni un ciclo del Z80**: se envían
+tres bytes al MCU y suena solo. Los programas se vuelcan una única vez al
+arrancar.
 
 Las variables del PEG (`V0`–`V15`) son comunes a los tres hilos, así que cada
 efecto usa las suyas —láser `V0`–`V1`, explosiones `V4`–`V5`, OVNI `V2`—; si se
 compartieran, dos efectos simultáneos se estropearían mutuamente.
+
+En los puertos AY, `A7` hace de línea BC1 (1 = seleccionar registro, 0 = escribir
+dato) y `A3` elige chip (1 = A, 0 = B). Los periodos de los cuatro tonos están
+calculados para un reloj de AY de ~1,625 MHz y salen en 147 / 139 / 131 / 123 Hz;
+si suenan altos o bajos, se ajustan en la tabla `mchton` de `sound.inc.asm`.
 
 ## Pendiente
 

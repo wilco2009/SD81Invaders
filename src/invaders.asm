@@ -87,7 +87,8 @@ movwt:  ld a,KRQWE
         and 1                   ; esperar a Q
         jr nz,movwt
 
-quit:   call vdone              ; devolver el ZX81 a su modo normal
+quit:   call sndoff             ; callar AY y los tres hilos del PEG
+        call vdone              ; devolver el ZX81 a su modo normal
         ei
         ret
 

@@ -1,19 +1,26 @@
 ; =============================================================
-; sound.inc.asm - Sonido por el PEG del SD81 Booster
+; sound.inc.asm - Sonido
 ;
-; El PEG es una maquina virtual dentro del interface con acceso
-; directo a los registros del AY y tres hilos paralelos. Una vez
-; lanzado un efecto no consume ni un ciclo del Z80, asi que el
-; sonido sale practicamente gratis dentro del presupuesto de
-; frame.
+; El interface tiene tres generadores de sonido independientes:
+; dos chips AY por hardware (compatibles ZonX-81) y el PEG, que es
+; un tercer AY sintetizado dentro del MCU. No comparten registros,
+; asi que se pueden usar a la vez sin pisarse.
 ;
-; Reparto de hilos:
-;   0 - marcha de fondo
-;   1 - disparo del jugador y OVNI
-;   2 - explosiones
+; Reparto:
 ;
-; Con solo tres hilos, disparar corta el zumbido del OVNI. Es la
-; unica concesion: el resto no se pisa.
+;   AY chip A       marcha de fondo
+;   PEG hilo 0      disparo del jugador
+;   PEG hilo 1      OVNI
+;   PEG hilo 2      explosiones
+;
+; La marcha va al AY por hardware porque es lo que menos necesita
+; del PEG: cuatro tonos fijos, sin envolvente ni ruido, con el
+; ritmo marcado desde el bucle de frame. Dejarla ahi libera los
+; tres hilos del PEG para los efectos, que si son barridos y
+; fundidos, y con ello disparo y OVNI dejan de cortarse.
+;
+; Los efectos PEG, una vez lanzados, no consumen ni un ciclo del
+; Z80: se envian tres bytes al MCU y el efecto suena solo.
 ;
 ; Las variables del PEG (V0-V15) son comunes a los tres hilos, asi
 ; que cada efecto usa las suyas: laser V0-V1, explosiones V4-V5,
@@ -24,13 +31,130 @@
 ; =============================================================
 
 ; --- Direcciones en la memoria de programa del PEG (0-255) ---
-PGNOTE  equ 0                   ; 4 notas x 7 instrucciones
-PGLASR  equ 28                  ; 12
-PGEXAL  equ 40                  ; 11
-PGEXPL  equ 52                  ; 11
-PGUFO   equ 64                  ; 13
+PGLASR  equ 0                   ; 12 instrucciones
+PGEXAL  equ 12                  ; 11
+PGEXPL  equ 24                  ; 11
+PGUFO   equ 36                  ; 13
 
 MCUTMO  equ 0                   ; 256 sondeos de reloj por byte
+
+; =============================================================
+; Marcha de fondo, sobre el AY chip A
+; =============================================================
+
+MCHVOL  equ 13                  ; amplitud de la marcha
+MCHLEN  equ 6                   ; frames que suena cada nota
+
+; -------------------------------------------------------------
+; aywr - escribe E en el registro A del AY chip A
+; -------------------------------------------------------------
+aywr:   out (AYALAT),a          ; A7=1: seleccionar registro
+        ld a,e
+        out (AYADAT),a          ; A7=0: escribir el dato
+        ret
+
+; -------------------------------------------------------------
+; ayini - canal A a tono puro y callado
+; -------------------------------------------------------------
+ayini:  ld a,7                  ; R7 - habilitacion de canales
+        ld e,3eh                ; solo tono A (un bit a 0 activa)
+        call aywr
+; cae en mchoff para dejarlo en silencio
+
+; -------------------------------------------------------------
+; mchoff - callar la nota en curso
+;
+; Hace falta antes de cualquier pausa larga: mientras la partida
+; se detiene (explosion de la nave, cambio de oleada) no se llama
+; a sndupd, y sin esto la nota se quedaria sonando fija.
+; -------------------------------------------------------------
+mchoff: xor a
+        ld (mchdur),a
+        ld a,8                  ; R8 - amplitud canal A
+        ld e,0
+        jp aywr
+
+; -------------------------------------------------------------
+; sndupd - un frame de marcha
+;
+; El tempo sale del numero de aliens vivos, que es exactamente lo
+; que hacia el arcade: la musica acelera porque queda menos
+; formacion, no porque haya un temporizador que la empuje.
+; -------------------------------------------------------------
+sndupd: ld a,(mchdur)           ; apagar la nota al agotar su duracion
+        or a
+        jr z,mchu1
+        dec a
+        ld (mchdur),a
+        jr nz,mchu1
+        ld a,8
+        ld e,0
+        call aywr
+
+mchu1:  ld hl,mchcnt            ; siguiente compas
+        dec (hl)
+        ret nz
+        call mchper
+        ld a,(mchnot)           ; rotar entre las cuatro notas
+        inc a
+        and 3
+        ld (mchnot),a
+
+        add a,a                 ; dos bytes de periodo por nota
+        ld e,a
+        ld d,0
+        ld hl,mchton
+        add hl,de
+        ld a,(hl)
+        ld e,a
+        ld a,0                  ; R0 - periodo bajo canal A
+        call aywr
+        inc hl
+        ld a,(hl)
+        ld e,a
+        ld a,1                  ; R1 - periodo alto canal A
+        call aywr
+        ld a,8                  ; R8 - amplitud
+        ld e,MCHVOL
+        call aywr
+        ld a,MCHLEN
+        ld (mchdur),a
+        ret
+
+; mchper - carga en mchcnt los frames que dura el compas
+mchper: ld a,(swleft)
+        ld hl,mchtab
+mchp1:  cp (hl)
+        inc hl
+        jr nc,mchp2
+        inc hl
+        jr mchp1
+mchp2:  ld a,(hl)
+        ld (mchcnt),a
+        ret
+
+; Pares (aliens restantes, frames por compas). Se toma el primero
+; cuyo umbral no supere a los aliens vivos; el ultimo es 0 y hace
+; de tope.
+mchtab: defb 41,30
+        defb 31,24
+        defb 21,18
+        defb 11,13
+        defb 6,9
+        defb 0,6
+
+; Los cuatro tonos graves descendentes, como periodo del AY
+; (byte bajo, byte alto). Calculados para un reloj de AY de
+; ~1,625 MHz: periodo = reloj / (16 * frecuencia). Si suenan altos
+; o bajos, es aqui donde se ajusta.
+mchton: defb 0b3h,002h          ; ~147 Hz
+        defb 0dah,002h          ; ~139 Hz
+        defb 007h,003h          ; ~131 Hz
+        defb 039h,003h          ; ~123 Hz
+
+; =============================================================
+; Efectos, sobre el PEG
+; =============================================================
 
 ; -------------------------------------------------------------
 ; mcusnd - envia A al MCU y espera a que cambie el bit de reloj
@@ -91,9 +215,10 @@ pegstp: ld a,CMDSPEG
         jp mcusnd
 
 ; -------------------------------------------------------------
-; sndini - vuelca todos los efectos a la memoria del PEG
+; sndini - AY listo y efectos volcados al PEG
 ; -------------------------------------------------------------
-sndini: ld ix,pgtab
+sndini: call ayini
+        ld ix,pgtab
         ld b,NPROG
 sni1:   push bc
         ld l,(ix+0)
@@ -108,64 +233,24 @@ sni1:   push bc
         ret
 
 ; -------------------------------------------------------------
-; sndupd - marcha de fondo: una nota por compas
-;
-; El tempo sale del numero de aliens vivos, que es exactamente lo
-; que hacia el arcade: la musica acelera porque queda menos
-; formacion, no porque haya un temporizador que la empuje.
+; sndoff - silencio total al salir a BASIC
 ; -------------------------------------------------------------
-sndupd: ld hl,mchcnt
-        dec (hl)
-        ret nz
-        call mchper             ; recargar el compas
-        ld a,(mchnot)           ; rotar entre las cuatro notas
-        inc a
-        and 3
-        ld (mchnot),a
-        ld b,a
-        add a,a
-        add a,a
-        add a,a                 ; nota * 8
-        sub b                   ; nota * 7 instrucciones
-        add a,PGNOTE
-        ld c,0                  ; hilo de la marcha
-        jp pegply
-
-; mchper - carga en mchcnt los frames que dura el compas
-mchper: ld a,(swleft)
-        ld hl,mchtab
-mchp1:  cp (hl)
-        inc hl
-        jr nc,mchp2
-        inc hl
-        jr mchp1
-mchp2:  ld a,(hl)
-        ld (mchcnt),a
-        ret
-
-; Pares (aliens restantes, frames por compas). Se toma el primero
-; cuyo umbral no supere a los aliens vivos; el ultimo es 0 y hace
-; de tope.
-mchtab: defb 41,30
-        defb 31,24
-        defb 21,18
-        defb 11,13
-        defb 6,9
-        defb 0,6
+sndoff: ld a,7
+        ld e,3fh                ; AY: todos los canales deshabilitados
+        call aywr
+        call mchoff
+        ld c,0
+        call pegstp
+        ld c,1
+        call pegstp
+        ld c,2
+        jp pegstp
 
 ; -------------------------------------------------------------
 ; Disparadores de efecto
 ; -------------------------------------------------------------
-sndlas: ld c,1                  ; disparo del jugador
+sndlas: ld c,0                  ; disparo del jugador
         ld a,PGLASR
-        jp pegply
-
-sndexa: ld c,2                  ; explosion de alien
-        ld a,PGEXAL
-        jp pegply
-
-sndexp: ld c,2                  ; explosion de la nave
-        ld a,PGEXPL
         jp pegply
 
 sndufo: ld c,1                  ; zumbido del OVNI
@@ -175,21 +260,17 @@ sndufo: ld c,1                  ; zumbido del OVNI
 sndufx: ld c,1                  ; callar el OVNI
         jp pegstp
 
+sndexa: ld c,2                  ; explosion de alien
+        ld a,PGEXAL
+        jp pegply
+
+sndexp: ld c,2                  ; explosion de la nave
+        ld a,PGEXPL
+        jp pegply
+
 ; -------------------------------------------------------------
 ; Programas PEG
 ; -------------------------------------------------------------
-
-; --- Las cuatro notas de la marcha, graves y descendentes ---
-; LD R7,3Eh / LD R1,ph / LD R0,pl / LD R8,13 / WAIT 120 /
-; LD R8,0 / HALT
-datnot: defb 03eh,007h, 000h,001h, 0d0h,000h, 00dh,008h
-        defb 078h,090h, 000h,008h, 010h,0a0h
-        defb 03eh,007h, 003h,001h, 000h,000h, 00dh,008h
-        defb 078h,090h, 000h,008h, 010h,0a0h
-        defb 03eh,007h, 003h,001h, 038h,000h, 00dh,008h
-        defb 078h,090h, 000h,008h, 010h,0a0h
-        defb 03eh,007h, 003h,001h, 074h,000h, 00dh,008h
-        defb 078h,090h, 000h,008h, 010h,0a0h
 
 ; --- Laser: barrido de tono de agudo a grave (18 pasos) ---
 datlas: defb 03eh,007h, 000h,001h, 00ch,008h, 01eh,020h
@@ -213,9 +294,7 @@ datufo: defb 03eh,007h, 00bh,008h, 050h,022h, 001h,001h
         defb 010h,0a0h
 
 ; --- Tabla de volcado: puntero, longitud, direccion PEG ---
-pgtab:  defw datnot
-        defb 56,PGNOTE
-        defw datlas
+pgtab:  defw datlas
         defb 24,PGLASR
         defw datexa
         defb 22,PGEXAL
@@ -223,8 +302,9 @@ pgtab:  defw datnot
         defb 22,PGEXPL
         defw datufo
         defb 26,PGUFO
-NPROG   equ 5
+NPROG   equ 4
 
 ; --- estado de la marcha ---
 mchcnt: defb 1                  ; frames que faltan para el compas
 mchnot: defb 0                  ; nota actual (0-3)
+mchdur: defb 0                  ; frames que le quedan a la nota
