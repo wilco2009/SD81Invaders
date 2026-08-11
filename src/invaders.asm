@@ -15,10 +15,9 @@
 ;   40 RAND USR 25000
 ;   50 SLOW
 ;
-; OJO: esta rama usa 25000, no 30000. El org y el CLEAR van
-; siempre juntos - cargar en una direccion codigo ensamblado para
-; otra da pantalla negra, porque el primer CALL ya se va a donde
-; no hay nada.
+; El org y el CLEAR del cargador van SIEMPRE juntos: cargar en una
+; direccion codigo ensamblado para otra da pantalla negra, porque
+; el primer CALL ya salta a donde no hay nada.
 ;
 ; El FAST de la linea 10 tampoco es opcional: en SLOW sigue activo
 ; el generador de NMI del ZX81, que el DI de aqui no puede parar
@@ -31,10 +30,10 @@
         include "hw.inc.asm"
         include "layout.inc.asm"
 
-; El codigo vive entre RAMTOP y $8000, donde empieza el bitmap de
-; pantalla. Con org 30000 solo quedaban 77 bytes de margen; a
-; 25000 (con CLEAR 24999) hay ~5 KB para lo que falta: OVNI,
-; explosiones, oleadas y sonido.
+; El codigo vive entre RAMTOP (CLEAR 24999) y $8000, donde empieza
+; el bitmap de pantalla. A 30000 solo quedaban 77 bytes de margen;
+; con 25000 hay ~5 KB para lo que falta: OVNI, explosiones,
+; oleadas y sonido.
         org 25000
 
 start:  di

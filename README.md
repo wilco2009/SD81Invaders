@@ -166,4 +166,4 @@ En orden de implementación sugerido:
 
 Space Invaders es obra original de Tomohiro Nishikado para Taito (1978). Esta es
 una reimplementación desde cero para ZX81 con SD81 Booster.
-"# SD81Invaders" 
+
