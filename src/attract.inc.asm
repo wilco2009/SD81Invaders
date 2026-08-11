@@ -33,26 +33,33 @@ YCODE   equ CHA+'Y'-'A'         ; codigo ZX81 de la Y
 YHOMEX  equ 17*8                ; sitio de la Y dentro del rotulo
 YHOMEY  equ 6*8
 ANIY    equ YHOMEY              ; camina por la linea del rotulo
-ANSPD   equ 2                   ; px por frame
-ANX0    equ 238                 ; por donde entra y sale
+ANSPD   equ 1                   ; px por frame
 ANXY    equ YHOMEX+8            ; justo a la derecha de la Y
-ANPASO  equ (ANX0-ANXY)/ANSPD   ; pasos de cada tramo
 ANYOFS  equ 8                   ; la Y va pegada a su izquierda
-ANANIM  equ 8                   ; frames por fotograma del calamar
+ANANIM  equ 10                  ; frames por fotograma del calamar
+
+; La x del calamar es de 16 bits para que el par pueda salirse de
+; la pantalla del todo. Con la Y a su izquierda, hace falta llegar
+; a 264 para que tambien ella quede fuera; con 272 sobra margen.
+; Lo que no cabe en pantalla no se dibuja, y el blitter recorta
+; por la derecha, asi que la salida es un deslizamiento y no un
+; corte seco.
+ANX0    equ 272                 ; fuera de pantalla por la derecha
+ANPASO  equ (ANX0-ANXY)/ANSPD   ; pasos de cada tramo
 
 ; -------------------------------------------------------------
 ; attmod - cicla las pantallas de atraccion
 ;          Devuelve Z si se pide salir, NZ para empezar partida
 ; -------------------------------------------------------------
 attmod: call attttl
-        ld b,80
+        ld b,60
         call attwt
         or a
         jr nz,attend
-        call attani             ; el invasor arregla la Y
+        call attani             ; el calamar arregla la Y
         or a
         jr nz,attend
-        ld b,120
+        ld b,80
         call attwt
         or a
         jr nz,attend
@@ -183,8 +190,8 @@ anyinv: ld hl,yinv
 ; extremos de cada tramo cae clavado en YHOMEX. La Y que arrastra
 ; es literalmente la que estaba escrita.
 ; -------------------------------------------------------------
-attani: ld a,ANX0               ; entra por la derecha
-        ld (anx),a
+attani: ld hl,ANX0              ; entra por la derecha
+        ld (anx),hl
         ld a,-ANSPD
         ld (anstp),a
         xor a
@@ -209,8 +216,8 @@ attani: ld a,ANX0               ; entra por la derecha
         ret nz
         call anera
 
-        ld a,ANX0               ; reaparece con la Y del derecho
-        ld (anx),a
+        ld hl,ANX0              ; reaparece con la Y del derecho
+        ld (anx),hl
         ld hl,yspr
         ld (anysp),hl
         ld a,-ANSPD
@@ -231,10 +238,14 @@ attani: ld a,ANX0               ; entra por la derecha
 ; -------------------------------------------------------------
 anwalk: push bc
         call anera              ; borra con el fotograma con el que pinto
-        ld a,(anx)
-        ld hl,anstp
-        add a,(hl)
-        ld (anx),a
+        ld a,(anstp)            ; paso con signo, extendido a 16 bits
+        ld e,a
+        rlca
+        sbc a,a
+        ld d,a
+        ld hl,(anx)
+        add hl,de
+        ld (anx),hl
         ld hl,ancnt             ; el calamar anima al caminar
         dec (hl)
         jr nz,anw1
@@ -276,42 +287,47 @@ anspr:  ld hl,sqda
         ret
 
 ; andrw / anera - el calamar y, si carga con ella, la Y
-andrw:  call anspr
+;
+; Cada uno se dibuja solo si su x cabe en un byte; si el byte alto
+; no es cero, esta fuera de pantalla por la derecha y se salta.
+andrw:  ld a,1
+        jr anpin
+anera:  xor a
+anpin:  ld (anmod),a
+        ld hl,(anx)
+        ld a,h
+        or a
+        jr nz,anpy              ; el calamar ya no cabe
+        call anspr
         ld a,(anx)
         ld e,a
         ld d,ANIY
         ld b,8
-        call sprdrw
-        ld a,(ancar)
+        call anblt
+anpy:   ld a,(ancar)
         or a
         ret z
-        ld hl,(anysp)
-        ld a,(anx)
-        sub ANYOFS
-        ld e,a
-        ld d,YHOMEY
-        ld b,8
-        jp sprdrw
-
-anera:  call anspr
-        ld a,(anx)
-        ld e,a
-        ld d,ANIY
-        ld b,8
-        call sprera
-        ld a,(ancar)
+        ld hl,(anx)
+        ld de,ANYOFS
         or a
-        ret z
-        ld hl,(anysp)
-        ld a,(anx)
-        sub ANYOFS
+        sbc hl,de
+        ld a,h
+        or a
+        ret nz                  ; la Y tampoco cabe
+        ld a,l
         ld e,a
+        ld hl,(anysp)
         ld d,YHOMEY
         ld b,8
+; anblt - dibuja o borra segun anmod
+anblt:  ld a,(anmod)
+        or a
+        jp nz,sprdrw
         jp sprera
 
 ; --- estado de la animacion ---
-anx:    defb 0                  ; x del calamar
+anmod:  defb 0                  ; 1 = dibujar, 0 = borrar
+anx:    defw 0                  ; x del calamar, 16 bits
 anstp:  defb 0                  ; paso, con signo
 ancar:  defb 0                  ; 1 = lleva la Y a rastras
 anysp:  defw 0                  ; sprite de la Y que lleva

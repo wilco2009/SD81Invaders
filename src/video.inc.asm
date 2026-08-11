@@ -166,8 +166,12 @@ pixad:  ld a,d
 ; en oleada del enjambre sin que un alien mutile a su vecino, que
 ; esta a solo 16 px y todavia no se ha movido.
 ;
-; Invariante: x <= 232, para que la ventana de 3 bytes nunca cruce
-; el final de la linea de barrido (columna+2 <= 31).
+; La ventana de escritura son tres bytes por linea. Cerca del
+; borde derecho no caben los tres, y escribirlos igual invadiria
+; el principio de la linea siguiente, asi que se recorta: en la
+; columna 30 se escriben dos y en la 31 uno solo. Con eso vale
+; cualquier x de 0 a 255 y los sprites pueden salir de pantalla
+; deslizandose en vez de desaparecer de golpe.
 ; -------------------------------------------------------------
 sprdrw: ld a,1
         jr sprgo
@@ -185,6 +189,13 @@ sprgo:  ld (bmode),a
         rrca
         and 1fh
         ld e,a                  ; E = columna en bytes
+        ld a,e                  ; bytes que caben antes del borde
+        cp 30
+        ld a,3
+        jr c,sprg1              ; columnas 0-29: caben los tres
+        ld a,32
+        sub e                   ; columna 30 -> 2, columna 31 -> 1
+sprg1:  ld (bnum),a
 
 sprlin: push de
         call pixad              ; HL = destino
@@ -206,16 +217,24 @@ sprsh:  srl b
         dec a
         jr nz,sprsh
 
-sprput: ld a,(bmode)
+; E queda libre como contador: lo que valiera se restaura del
+; push de la linea.
+sprput: ld a,(bnum)
+        ld e,a
+        ld a,(bmode)
         or a
         jr z,spreb
         ld a,(hl)               ; --- OR: dibujar ---
         or b
         ld (hl),a
+        dec e
+        jr z,sprnx
         inc l
         ld a,(hl)
         or c
         ld (hl),a
+        dec e
+        jr z,sprnx
         inc l
         ld a,(hl)
         or d
@@ -225,11 +244,15 @@ spreb:  ld a,b                  ; --- AND NOT: borrar ---
         cpl
         and (hl)
         ld (hl),a
+        dec e
+        jr z,sprnx
         inc l
         ld a,c
         cpl
         and (hl)
         ld (hl),a
+        dec e
+        jr z,sprnx
         inc l
         ld a,d
         cpl
@@ -305,3 +328,4 @@ bsrc:   defw 0                  ; puntero de lectura del sprite
 bmode:  defb 0                  ; 1 = OR, 0 = AND NOT
 bshf:   defb 0                  ; desplazamiento en pixeles (0-7)
 bcnt:   defb 0                  ; lineas pendientes
+bnum:   defb 3                  ; bytes que caben antes del borde
