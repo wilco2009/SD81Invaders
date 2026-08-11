@@ -31,10 +31,30 @@
 ; =============================================================
 
 ; --- Direcciones en la memoria de programa del PEG (0-255) ---
-PGLASR  equ 0                   ; 12 instrucciones
-PGEXAL  equ 12                  ; 11
-PGEXPL  equ 24                  ; 11
-PGUFO   equ 36                  ; 13
+PGLASR  equ 0                   ; 11 instrucciones
+PGUFO   equ 12                  ; 12
+PGEXAL  equ 24                  ; 10
+PGEXPL  equ 36                  ; 10
+PGSIL   equ 48                  ; 2
+PGSOFF  equ 52                  ; 5
+
+; Un canal del PEG por hilo, para que no se estorben:
+;
+;   hilo 0  disparo      canal A, tono   R0/R1, R8
+;   hilo 1  OVNI         canal B, tono   R2/R3, R9
+;   hilo 2  explosiones  canal C, ruido  R6,    R10
+;
+; R7 (habilitacion) es un registro UNICO para los tres canales, de
+; modo que un efecto no puede apagarlo al terminar sin callar
+; tambien a los otros dos. Cada efecto lo deja en PEGMIX al
+; empezar -operacion idempotente, da igual quien llegue primero- y
+; al acabar solo pone a cero SU amplitud.
+;
+; Ademas, STOP_PEG detiene el programa pero no toca los registros
+; del AY: si un efecto continuo se corta a media ejecucion, su
+; nota se queda sonando fija. Por eso existe PGSIL, que se lanza
+; sobre el hilo despues de pararlo.
+PEGMIX  equ 1ch                 ; tono A, tono B y ruido C activos
 
 MCUTMO  equ 0                   ; 256 sondeos de reloj por byte
 
@@ -236,15 +256,18 @@ sni1:   push bc
 ; sndoff - silencio total al salir a BASIC
 ; -------------------------------------------------------------
 sndoff: ld a,7
-        ld e,3fh                ; AY: todos los canales deshabilitados
+        ld e,3fh                ; AY hardware: todo deshabilitado
         call aywr
         call mchoff
-        ld c,0
+        ld c,0                  ; parar los tres hilos del PEG...
         call pegstp
         ld c,1
         call pegstp
         ld c,2
-        jp pegstp
+        call pegstp
+        ld c,0                  ; ...y callar su AY, que pararlos
+        ld a,PGSOFF             ; no apaga los registros
+        jp pegply
 
 ; -------------------------------------------------------------
 ; Disparadores de efecto
@@ -257,8 +280,14 @@ sndufo: ld c,1                  ; zumbido del OVNI
         ld a,PGUFO
         jp pegply
 
-sndufx: ld c,1                  ; callar el OVNI
-        jp pegstp
+; Callar el OVNI: pararlo no basta, porque STOP_PEG deja los
+; registros del AY como estuvieran y la nota se queda sonando.
+; Hay que lanzarle encima el silenciador del canal B.
+sndufx: ld c,1
+        call pegstp
+        ld c,1
+        ld a,PGSIL
+        jp pegply
 
 sndexa: ld c,2                  ; explosion de alien
         ld a,PGEXAL
@@ -272,37 +301,52 @@ sndexp: ld c,2                  ; explosion de la nave
 ; Programas PEG
 ; -------------------------------------------------------------
 
-; --- Laser: barrido de tono de agudo a grave (18 pasos) ---
-datlas: defb 03eh,007h, 000h,001h, 00ch,008h, 01eh,020h
+; --- Laser: canal A, barrido de agudo a grave en 18 pasos (V0,V1)
+;     LD R7,1Ch / LD R1,0 / LD R8,12 / LD V0,30 / LD V1,18 /
+;     bucle: LD R0,V0 / WAIT 12 / ADD V0,10 / DJNZ V1 /
+;     LD R8,0 / HALT
+datlas: defb 01ch,007h, 000h,001h, 00ch,008h, 01eh,020h
         defb 012h,021h, 000h,041h, 00ch,090h, 00ah,030h
-        defb 0fch,081h, 000h,008h, 03fh,007h, 010h,0a0h
+        defb 0fch,081h, 000h,008h, 010h,0a0h
 
-; --- Explosion de alien: ruido con fundido en 15 pasos (V4) ---
-datexa: defb 008h,006h, 037h,007h, 00fh,008h, 064h,090h
-        defb 00fh,024h, 084h,041h, 028h,090h, 0fdh,084h
-        defb 000h,008h, 03fh,007h, 010h,0a0h
+; --- OVNI: canal B, dos tonos alternando 80 veces (V2) ---
+datufo: defb 01ch,007h, 00bh,009h, 050h,022h, 001h,003h
+        defb 03ch,002h, 023h,090h, 001h,003h, 06eh,002h
+        defb 023h,090h, 0f9h,082h, 000h,009h, 010h,0a0h
 
-; --- Explosion de la nave: mas grave y mas larga (V5) ---
-datexp: defb 014h,006h, 037h,007h, 00fh,008h, 0c8h,090h
-        defb 00fh,025h, 085h,041h, 03ch,090h, 0fdh,085h
-        defb 000h,008h, 03fh,007h, 010h,0a0h
+; --- Explosion de alien: canal C, ruido con fundido de 15 (V4) ---
+datexa: defb 01ch,007h, 008h,006h, 00fh,00ah, 064h,090h
+        defb 00fh,024h, 0a4h,041h, 028h,090h, 0fdh,084h
+        defb 000h,00ah, 010h,0a0h
 
-; --- OVNI: dos tonos alternando 80 veces (V2) ---
-datufo: defb 03eh,007h, 00bh,008h, 050h,022h, 001h,001h
-        defb 03ch,000h, 023h,090h, 001h,001h, 06eh,000h
-        defb 023h,090h, 0f9h,082h, 000h,008h, 03fh,007h
+; --- Explosion de la nave: canal C, mas grave y mas larga (V5) ---
+datexp: defb 01ch,007h, 014h,006h, 00fh,00ah, 0c8h,090h
+        defb 00fh,025h, 0a5h,041h, 03ch,090h, 0fdh,085h
+        defb 000h,00ah, 010h,0a0h
+
+; --- Silenciador del canal B, para cortar el OVNI en seco ---
+;     LD R9,0 / HALT
+datsil: defb 000h,009h, 010h,0a0h
+
+; --- Silencio total del AY del PEG, al salir a BASIC ---
+;     LD R8,0 / LD R9,0 / LD R10,0 / LD R7,3Fh / HALT
+datsof: defb 000h,008h, 000h,009h, 000h,00ah, 03fh,007h
         defb 010h,0a0h
 
 ; --- Tabla de volcado: puntero, longitud, direccion PEG ---
 pgtab:  defw datlas
-        defb 24,PGLASR
-        defw datexa
-        defb 22,PGEXAL
-        defw datexp
-        defb 22,PGEXPL
+        defb 22,PGLASR
         defw datufo
-        defb 26,PGUFO
-NPROG   equ 4
+        defb 24,PGUFO
+        defw datexa
+        defb 20,PGEXAL
+        defw datexp
+        defb 20,PGEXPL
+        defw datsil
+        defb 4,PGSIL
+        defw datsof
+        defb 10,PGSOFF
+NPROG   equ 6
 
 ; --- estado de la marcha ---
 mchcnt: defb 1                  ; frames que faltan para el compas

@@ -174,12 +174,24 @@ El interface tiene **tres generadores independientes**: dos chips AY por
 hardware (compatibles ZonX-81) y el PEG, que es un tercer AY sintetizado dentro
 del MCU. No comparten registros, así que se pueden usar a la vez sin pisarse.
 
-| Generador | Uso |
-|---|---|
-| AY chip A (`$DF`/`$1F`) | Marcha de fondo |
-| PEG hilo 0 | Disparo del jugador |
-| PEG hilo 1 | OVNI |
-| PEG hilo 2 | Explosiones |
+| Generador | Canal | Registros | Uso |
+|---|---|---|---|
+| AY chip A (`$DF`/`$1F`) | A, tono | `R0`/`R1`, `R8` | Marcha de fondo |
+| PEG hilo 0 | A, tono | `R0`/`R1`, `R8` | Disparo del jugador |
+| PEG hilo 1 | B, tono | `R2`/`R3`, `R9` | OVNI |
+| PEG hilo 2 | C, ruido | `R6`, `R10` | Explosiones |
+
+**Los tres hilos del PEG comparten un solo AY**, así que cada uno tiene su
+canal. Es obligatorio y no una elección estética: `R7` (habilitación) es un
+registro *único* para los tres canales, de modo que un efecto que lo apagara al
+terminar callaría también a los otros dos. Cada efecto lo deja en `PEGMIX`
+(`$1C` — tono A, tono B, ruido C) al empezar, operación idempotente que da igual
+quién ejecute primero, y al acabar pone a cero **solo su propia amplitud**.
+
+Y un detalle que muerde: **`STOP_PEG` detiene el programa pero no toca los
+registros del AY**. Si se corta un efecto continuo a media ejecución, su nota se
+queda sonando fija para siempre. Por eso al retirar el OVNI hay que lanzarle
+encima un pequeño programa silenciador en vez de solo pararlo.
 
 **La marcha va al AY hardware y no al PEG**, y el reparto no es arbitrario: son
 cuatro tonos fijos, sin envolvente ni ruido, con el ritmo marcado desde el bucle
