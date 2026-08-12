@@ -87,7 +87,8 @@ attw1:  pop bc
 
 ; -------------------------------------------------------------
 ; attkey - teclas de arranque
-;          A = 0 nada, 1 un jugador, 2 dos jugadores, 3 salir
+;          A = 0 nada, 1 un jugador, 2 dos jugadores,
+;              3 salir, 4 recuperar partida
 ; -------------------------------------------------------------
 attkey: ld a,KR123              ; media fila 1 2 3 4 5
         in a,(KBPORT)
@@ -95,6 +96,10 @@ attkey: ld a,KR123              ; media fila 1 2 3 4 5
         jr z,atk1
         bit 1,a
         jr z,atk2
+        ld a,KRENT              ; media fila ENTER L K J H
+        in a,(KBPORT)
+        bit 1,a                 ; L
+        jr z,atk4
         ld a,KRQWE
         in a,(KBPORT)
         and 1                   ; Q
@@ -106,6 +111,8 @@ atk1:   ld a,1
 atk2:   ld a,2
         ret
 atk3:   ld a,3
+        ret
+atk4:   ld a,4
         ret
 
 ; -------------------------------------------------------------

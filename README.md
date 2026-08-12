@@ -72,6 +72,8 @@ Requiere un core FPGA con soporte de `POKE 2057` (doble buffer).
 | `5` | Izquierda |
 | `8` | Derecha |
 | `0` | Disparo |
+| `S` | Guardar la partida en la SD |
+| `L` | Recuperarla (en juego o desde la atracción) |
 | `Q` | Salir a BASIC |
 
 ## Dos jugadores
@@ -272,6 +274,32 @@ al viaje. Tampoco vale cualquiera — `.ROM` carga en la dirección 0 y resetea 
 máquina, y `.WAV` se reproduce. `.HI` no significa nada para el MCU, que es
 justo lo que se busca. El nombre viaja en ASCII, no en códigos ZX81: al otro
 lado hay una FAT32.
+
+## Guardar la partida
+
+`S` guarda y `L` recupera, en un fichero `INVADERS.SG` de 488 bytes. `L`
+funciona también desde la atracción, que es lo natural al encender la máquina.
+
+Se guarda **solo al jugador en curso**, así que una partida recuperada se reanuda
+siempre como de un jugador: salvar los dos con sus dos formaciones y sus dos
+juegos de escudos serían unos 1400 bytes y no compensa.
+
+| Bloque | Bytes |
+|---|---|
+| Enjambre (posiciones, oleada y `swaliv`) | 68 |
+| Nave y vidas | 2 |
+| Marcador | 2 |
+| Escudos, tal y como estén erosionados | 384 |
+| Línea del suelo, con sus muescas | 32 |
+
+La línea del suelo va aparte porque se erosiona con las bombas y no forma parte
+de ninguna ranura de jugador. Los proyectiles, el OVNI y las explosiones no se
+guardan: al recuperar se ponen a cero.
+
+**Nada se escribe en pantalla hasta haber validado la longitud**, de modo que un
+fichero que no existe o que no cuadra deja la partida como estaba. La respuesta
+se consume entera igualmente, porque dejar bytes sin recoger descuadraría al MCU
+para todo lo que viniera después.
 
 ## Pendiente
 

@@ -57,9 +57,17 @@ mach:   call attmod             ; titulo, la Y y la tabla
         jr z,mach
 machk:  cp 3
         jr z,quit
+        cp 4
+        jr z,machl
         ld (nplay),a            ; 1 o 2 jugadores
         call newgam
-        call gmloop
+        jr machg
+machl:  call blclra             ; recuperar partida guardada
+        call clrbmp
+        call ayini
+        call sgload
+        jr z,mach               ; no habia: seguir en la atraccion
+machg:  call gmloop
         cp 3
         jr nz,mach
 
@@ -162,6 +170,18 @@ gmloop: call waitvs
         xor a
         ret                     ; se agoto la demo
 
+        ld a,(demoon)           ; guardar y recuperar, solo jugando
+        or a
+        jr nz,gmlk
+        call sgkey
+        or a
+        jr z,gmlk
+        dec a
+        jr nz,gmlld
+        call sgsave
+        jr gmlk
+gmlld:  call sgload
+
 gmlk:   call attkey             ; 0 nada, 1/2 jugadores, 3 salir
         cp 3
         jr z,gmlq               ; Q sale siempre
@@ -261,6 +281,7 @@ txtgov: defb CHA+'G'-'A',CHA+'A'-'A',CHA+'M'-'A',CHA+'E'-'A',CHSP
         include "attract.inc.asm"
         include "demo.inc.asm"
         include "hiscore.inc.asm"
+        include "savegame.inc.asm"
 ; players va el ultimo: sus dos ranuras de estado son 908 bytes de
 ; defs, y mientras sean lo ultimo del fuente no engordan el binario
         include "players.inc.asm"
