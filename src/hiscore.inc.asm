@@ -32,25 +32,30 @@ HSNLEN  equ 10                  ; "HISCORE.HI"
 ; -------------------------------------------------------------
 ; mcurcv - recibe un byte del MCU. Destruye BC y DE.
 ;
-; El dato ya esta puesto cuando se entra: lo garantiza la espera
-; de la operacion anterior. Se lee primero y despues se aguarda
-; el cambio de reloj, que es el MCU diciendo que ya tiene listo
-; lo siguiente.
+; Se lee el dato PRIMERO y se espera el cambio de reloj despues.
+; Es el orden que usa la propia ROM del interface, tanto al leer
+; la longitud como en su bucle de datos:
 ;
-; El plazo es de 16 bits y no de 8 como en mcusnd, porque aqui se
-; espera al MCU trabajando: un SAVE toca la tarjeta de verdad y
-; tarda milisegundos, no microsegundos.
+;     in a,(DataPort)  /  ld (de),a  /  ...esperar el reloj
+;
+; El dato ya esta puesto al entrar: lo dejo ahi la espera de la
+; operacion anterior. El cambio que se aguarda al final es el
+; aviso de que viene el siguiente, y en el ultimo byte lo da el
+; ToggleClock final del firmware.
+;
+; El plazo es de 16 bits porque aqui se espera al MCU trabajando:
+; leer de la tarjeta tarda milisegundos, no microsegundos.
 ; -------------------------------------------------------------
 mcurcv: in a,(MCUCTL)
         and 80h
         ld d,a                  ; reloj antes de leer
         in a,(MCUDAT)
         ld e,a                  ; el dato
-        ld bc,0                 ; 65536 sondeos
+        ld bc,MCUSLW
 mrc1:   in a,(MCUCTL)
         and 80h
         cp d
-        jr nz,mrc2              ; ha cambiado
+        jr nz,mrc2              ; ha cambiado: listo el siguiente
         dec bc
         ld a,b
         or c

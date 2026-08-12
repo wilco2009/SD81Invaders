@@ -130,7 +130,15 @@ sgsave: call sgquiet
 ; =============================================================
 
 ; sglblk - recibe BC bytes a partir de HL
-sglblk: call mcurcv             ; destruye BC y DE
+;
+; BC se salva porque mcurcv lo usa para su propio plazo de espera.
+; Sin esto el contador se pierde en el primer byte y el bucle se
+; queda pidiendo bytes que ya no llegan, agotando el plazo largo
+; en cada uno: eso es lo que parecia un cuelgue. hsload no lo
+; sufria porque lleva su cuenta en memoria.
+sglblk: push bc
+        call mcurcv
+        pop bc
         ld (hl),a
         inc hl
         dec bc
