@@ -54,9 +54,15 @@ plysav: call plyadr
         jp shsave               ; los escudos, desde la pantalla
 
 ; -------------------------------------------------------------
-; plyld - carga la ranura del jugador C y repinta la pantalla
+; plyld - carga la ranura del jugador de turno y repinta
+;
+; El turno lo saca de curply y no de C a proposito: entre el
+; cambio de turno y la carga hay un plymsg de por medio, y ese C
+; no sobrevive ni a la primera rutina de texto.
 ; -------------------------------------------------------------
-plyld:  call plyadr
+plyld:  ld a,(curply)
+        ld c,a
+        call plyadr
         ld de,swx
         ld bc,PLYSW
         ldir
@@ -101,12 +107,20 @@ plyswp: ld a,(curply)
         ret                     ; NZ: turno cambiado
 
 ; -------------------------------------------------------------
-; plymsg - "PLAYER n" un momento, sobre la pantalla despejada.
-;          No hace falta borrarlo: plyld repinta todo detras.
+; plymsg - "PLAYER n" un momento, sobre la zona de juego despejada
+;
+; Limpia al entrar y al salir. Lo segundo hace falta porque desde
+; newgam no hay nadie detras que repinte: alli solo se dibujan
+; cabecera, escudos y formacion, y el cartel se quedaba clavado en
+; medio de la pantalla el resto de la partida.
+;
+; Tambien calla el OVNI. Su zumbido lo lleva un hilo del PEG que
+; sigue sonando por su cuenta mientras aqui se espera, y se oia
+; por encima del cartel.
 ; -------------------------------------------------------------
-plymsg: ld d,16
-        ld b,GNDY-16
-        call clrbnd
+plymsg: call sndufx
+        call mchoff
+        call plymcl
         ld hl,txply
         ld d,PLYMROW
         ld e,PLYMCOL
@@ -118,7 +132,12 @@ plymsg: ld d,16
         ld e,PLYMCOL+7
         call prtchr
         ld b,90
-        jp pause
+        call pause
+; cae en plymcl para llevarse el cartel
+
+plymcl: ld d,16
+        ld b,GNDY-16
+        jp clrbnd
 
 txply:  defb CHA+'P'-'A',CHA+'L'-'A',CHA+'A'-'A',CHA+'Y'-'A'
         defb CHA+'E'-'A',CHA+'R'-'A',CHSP,CHEOS

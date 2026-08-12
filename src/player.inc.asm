@@ -141,13 +141,18 @@ plm2:   ld a,(plx)
 ;          Deja en B la x deseada y sigue por el tronco comun,
 ;          igual que haria el teclado.
 ; -------------------------------------------------------------
+; demtgt devuelve en A si hay objetivo, y hay que guardarlo antes
+; de tocar nada: el xor que limpia demlin se lleva por delante sus
+; flags, y mirarlos despues equivale a no tener objetivo nunca.
 pldemo: push bc
         call demtgt
         pop bc
+        ld c,a
         xor a
         ld (demlin),a           ; de entrada, sin punteria
-        jr nz,pldm0
-        jp plm2                 ; sin objetivo: quieta
+        ld a,c
+        or a
+        jp z,plm2               ; sin objetivo: quieta
 
 pldm0:  ld hl,alwid             ; C = centro real del objetivo,
         ld a,(crow)             ; que depende de la fila
