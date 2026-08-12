@@ -95,8 +95,18 @@ dcl1:   push bc
         xor a
         ret                     ; via libre
 
+; -------------------------------------------------------------
 ; dnexti - avanza cidx/ccol/crank una casilla
-dnexti: ld hl,cidx
+;
+; HL se salva porque quien llama lo trae apuntando dentro de
+; swaliv y lo sigue usando al volver. Sin esto el bucle de demtgt
+; acababa leyendo el propio cidx en vez del array: como cidx
+; acaba de incrementarse nunca vale cero, o sea que daba por vivo
+; al primer hueco y se quedaba clavado en esa casilla para
+; siempre. Vista desde fuera, la IA perseguia el hueco.
+; -------------------------------------------------------------
+dnexti: push hl
+        ld hl,cidx
         inc (hl)
         ld a,(ccol)
         inc a
@@ -106,8 +116,10 @@ dnexti: ld hl,cidx
         ld (ccol),a
         ld hl,crank
         inc (hl)
+        pop hl
         ret
 dnx1:   ld (ccol),a
+        pop hl
         ret
 
 ; --- estado ---
