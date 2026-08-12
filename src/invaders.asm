@@ -38,6 +38,7 @@
 
 start:  di
         call vinit              ; modo de video y doble buffer
+        call hsload             ; el record de la partida anterior
         call sndini             ; volcar los efectos al PEG
         call ybuild             ; la Y del rotulo, derecha e invertida
 
@@ -259,6 +260,9 @@ txtgov: defb CHA+'G'-'A',CHA+'A'-'A',CHA+'M'-'A',CHA+'E'-'A',CHSP
         include "sound.inc.asm"
         include "attract.inc.asm"
         include "demo.inc.asm"
+        include "hiscore.inc.asm"
+; players va el ultimo: sus dos ranuras de estado son 908 bytes de
+; defs, y mientras sean lo ultimo del fuente no engordan el binario
         include "players.inc.asm"
 
         end

@@ -259,6 +259,16 @@ dato) y `A3` elige chip (1 = A, 0 = B). Los periodos de los cuatro tonos están
 calculados para un reloj de AY de ~1,625 MHz y salen en 147 / 139 / 131 / 123 Hz;
 si suenan altos o bajos, se ajustan en la tabla `mchton` de `sound.inc.asm`.
 
+## Puntuación máxima
+
+Lo único que se aparta del original a propósito: en el arcade el récord moría al
+apagar la máquina, y aquí sobrevive en un fichero `HISCORE` de dos bytes en el
+mismo directorio del juego. Se lee al arrancar y solo se escribe cuando el
+récord cambia de verdad, no una vez por partida.
+
+Va **sin extensión** a propósito: el MCU interpreta las que conoce, y una de
+ellas es `.ROM`, que carga en la dirección 0 y resetea la máquina.
+
 ## Pendiente
 
 Nada del arcade original queda por hacer. Posibles refinamientos:

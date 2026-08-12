@@ -34,6 +34,8 @@ AYBLAT  equ 0c6h            ; chip B - seleccion de registro
 AYBDAT  equ 006h            ; chip B - escritura de dato
 
 ; --- Comandos del MCU ---
+CMDLOAD equ 9               ; LOAD:  str nombre -> 2B long + datos + status
+CMDSAVE equ 10              ; SAVE:  str nombre + 2B long + datos -> status
 CMDLPEG equ 40              ; LOAD_PEG:  1B dir + 1B long + datos
 CMDPPEG equ 41              ; PLAY_PEG:  1B hilo + 1B dir
 CMDSPEG equ 42              ; STOP_PEG:  1B hilo

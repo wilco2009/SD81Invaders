@@ -242,9 +242,17 @@ adsc1:  ld d,ROWSCR
 ; hiupd - se queda con la mejor puntuacion de la sesion,
 ;         mirando los marcadores de los dos jugadores
 ; -------------------------------------------------------------
-hiupd:  ld hl,(scorp1)
+hiupd:  xor a
+        ld (hsnew),a
+        ld hl,(scorp1)
         call hiup1
         ld hl,(scorp2)
+        call hiup1
+        ld a,(hsnew)            ; a la SD solo si de verdad ha
+        or a                    ; cambiado, no una vez por partida
+        ret z
+        jp hssave
+
 hiup1:  ld de,(hiscor)
         ld a,h
         cp d
@@ -254,6 +262,8 @@ hiup1:  ld de,(hiscor)
         cp e
         ret c
 hiup2:  ld (hiscor),hl
+        ld a,1
+        ld (hsnew),a
         ret
 
 ; --- estado ---
