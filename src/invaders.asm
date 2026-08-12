@@ -45,8 +45,8 @@ start:  di
 ; Ciclo de la maquina: atraccion, demo, partida, y vuelta a
 ; empezar. Las tres fases devuelven lo mismo en A:
 ;   0 = termino sin que nadie pulsara nada
-;   1 = empezar partida de verdad
-;   2 = salir a BASIC
+;   1 o 2 = empezar partida con ese numero de jugadores
+;   3 = salir a BASIC
 ; -------------------------------------------------------------
 mach:   call attmod             ; titulo, la Y y la tabla
         or a
@@ -54,11 +54,12 @@ mach:   call attmod             ; titulo, la Y y la tabla
         call demrun             ; la maquina juega sola
         or a
         jr z,mach
-machk:  cp 2
+machk:  cp 3
         jr z,quit
-        call newgam             ; partida de verdad
+        ld (nplay),a            ; 1 o 2 jugadores
+        call newgam
         call gmloop
-        cp 2
+        cp 3
         jr nz,mach
 
 quit:   call sndoff             ; callar AY y los tres hilos del PEG
@@ -81,8 +82,10 @@ newgam: call blclra             ; sin esto, una explosion viva al acabar
                                 ; pantalla nueva, mordiendola
         call ayini              ; el AY vuelve de sndoff apagado
         ld hl,0
-        ld (score1),hl
+        ld (scorp1),hl
+        ld (scorp2),hl
         xor a
+        ld (curply),a           ; empieza el jugador 1
         ld (gover),a
         ld (shon),a
         ld (exon),a
@@ -98,7 +101,10 @@ newgam: call blclra             ; sin esto, una explosion viva al acabar
         call swinit             ; formacion de 55 aliens
         call plinit             ; nave y vidas
         call bminit             ; ranuras de proyectiles alien
-        jp ufoini               ; nave nodriza
+        call ufoini             ; nave nodriza
+        jp plyini               ; el mismo estado recien montado en
+                                ; las dos ranuras, para que el
+                                ; jugador 2 empiece igual de limpio
 
 ; -------------------------------------------------------------
 ; gmloop - una partida entera, una vuelta por frame (50 Hz).
@@ -114,8 +120,8 @@ newgam: call blclra             ; sin esto, una explosion viva al acabar
 ; porque es el juego.
 ;
 ; Devuelve en A: 0 = partida terminada o demo agotada,
-;                1 = el jugador quiere jugar de verdad,
-;                2 = salir a BASIC.
+;                1 o 2 = empezar partida con ese numero de jugadores,
+;                3 = salir a BASIC.
 ; -------------------------------------------------------------
 gmloop: call waitvs
         call swstep             ; mueve un alien de la formacion
@@ -151,18 +157,18 @@ gmloop: call waitvs
         xor a
         ret                     ; se agoto la demo
 
-gmlk:   ld a,KRQWE
-        in a,(KBPORT)
-        and 1                   ; Q = salir
-        jr z,gmlq
-        ld a,(demoon)           ; durante la demo, disparo = jugar
+gmlk:   call attkey             ; 0 nada, 1/2 jugadores, 3 salir
+        cp 3
+        jr z,gmlq               ; Q sale siempre
         or a
-        jr z,gmloop
-        call plfire
-        jr nz,gmloop
-        ld a,1
+        jp z,gmloop
+        ld c,a
+        ld a,(demoon)           ; durante la demo, 1 y 2 arrancan
+        or a                    ; partida; en partida real no hacen nada
+        jp z,gmloop
+        ld a,c
         ret
-gmlq:   ld a,2
+gmlq:   ld a,3
         ret
 
 gmlinv: ld a,1
@@ -178,20 +184,7 @@ gmle1:  call govdrw             ; rotulo de fin de partida
         xor a
         ret                     ; fin de partida
 
-; -------------------------------------------------------------
-; hiupd - se queda con la mejor puntuacion de la sesion
-; -------------------------------------------------------------
-hiupd:  ld hl,(score1)
-        ld de,(hiscor)
-        ld a,h
-        cp d
-        jr c,hiup1
-        jr nz,hiup2
-        ld a,l
-        cp e
-        jr c,hiup1
-hiup2:  ld (hiscor),hl
-hiup1:  ret
+; (hiupd vive en players.inc.asm, porque mira los dos marcadores)
 
 ; -------------------------------------------------------------
 ; govdrw - rotulo de fin de partida
@@ -217,7 +210,7 @@ hdrini: ld hl,txts1
         ld e,COLS2
         call prtstr
 
-        ld hl,(score1)
+        ld hl,(scorp1)
         ld d,ROWSCR
         ld e,COLS1+2
         call prtbcd
@@ -225,7 +218,7 @@ hdrini: ld hl,txts1
         ld d,ROWSCR
         ld e,COLHI+2
         call prtbcd
-        ld hl,(score2)
+        ld hl,(scorp2)
         ld d,ROWSCR
         ld e,COLS2+2
         call prtbcd
@@ -246,10 +239,7 @@ txts2:  defb CHA+'S'-'A',CHA+'C'-'A',CHA+'O'-'A',CHA+'R'-'A'
 txtgov: defb CHA+'G'-'A',CHA+'A'-'A',CHA+'M'-'A',CHA+'E'-'A',CHSP
         defb CHA+'O'-'A',CHA+'V'-'A',CHA+'E'-'A',CHA+'R'-'A',CHEOS
 
-; --- marcadores, en BCD empaquetado de 4 digitos ---
-score1: defw 0
-score2: defw 0
-hiscor: defw 0
+; (los marcadores viven en players.inc.asm, uno por jugador)
 
 ; -------------------------------------------------------------
         include "video.inc.asm"
@@ -265,5 +255,6 @@ hiscor: defw 0
         include "sound.inc.asm"
         include "attract.inc.asm"
         include "demo.inc.asm"
+        include "players.inc.asm"
 
         end

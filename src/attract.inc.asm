@@ -75,21 +75,37 @@ attmod: call attttl
 ; -------------------------------------------------------------
 attwt:  push bc
         call waitvs
-        call plfire             ; Z si el disparo esta pulsado
-        jr z,attw1
-        ld a,KRQWE
-        in a,(KBPORT)
-        and 1                   ; Q
-        jr z,attw2
+        call attkey
+        or a
+        jr nz,attw1
         pop bc
         djnz attwt
         xor a
         ret
 attw1:  pop bc
-        ld a,1
         ret
-attw2:  pop bc
-        ld a,2
+
+; -------------------------------------------------------------
+; attkey - teclas de arranque
+;          A = 0 nada, 1 un jugador, 2 dos jugadores, 3 salir
+; -------------------------------------------------------------
+attkey: ld a,KR123              ; media fila 1 2 3 4 5
+        in a,(KBPORT)
+        bit 0,a
+        jr z,atk1
+        bit 1,a
+        jr z,atk2
+        ld a,KRQWE
+        in a,(KBPORT)
+        and 1                   ; Q
+        jr z,atk3
+        xor a
+        ret
+atk1:   ld a,1
+        ret
+atk2:   ld a,2
+        ret
+atk3:   ld a,3
         ret
 
 ; -------------------------------------------------------------
@@ -107,7 +123,7 @@ attttl: call clrbmp
         call prtstr
         ld hl,txpush
         ld d,18
-        ld e,8
+        ld e,5
         jp prtstr
 
 ; -------------------------------------------------------------
@@ -262,18 +278,7 @@ anw1:   call andrw
 
 ; anpoll - un frame, vigilando el teclado
 anpoll: call waitvs
-        call plfire
-        jr z,anp1
-        ld a,KRQWE
-        in a,(KBPORT)
-        and 1
-        jr z,anp2
-        xor a
-        ret
-anp1:   ld a,1
-        ret
-anp2:   ld a,2
-        ret
+        jp attkey
 
 ; anspr - HL = fotograma actual del calamar
 anspr:  ld hl,sqda
@@ -356,10 +361,12 @@ txtitl: defb CHA+'S'-'A',CHA+'P'-'A',CHA+'A'-'A',CHA+'C'-'A'
         defb CHA+'A'-'A',CHA+'D'-'A',CHA+'E'-'A',CHA+'R'-'A'
         defb CHA+'S'-'A',CHEOS
 
+; "PRESS 1 OR 2 TO START" - 21 caracteres, centrado en la 5
 txpush: defb CHA+'P'-'A',CHA+'R'-'A',CHA+'E'-'A',CHA+'S'-'A'
-        defb CHA+'S'-'A',CHSP,CH0,CHSP,CHA+'T'-'A',CHA+'O'-'A'
-        defb CHSP,CHA+'S'-'A',CHA+'T'-'A',CHA+'A'-'A'
-        defb CHA+'R'-'A',CHA+'T'-'A',CHEOS
+        defb CHA+'S'-'A',CHSP,CH0+1,CHSP,CHA+'O'-'A',CHA+'R'-'A'
+        defb CHSP,CH0+2,CHSP,CHA+'T'-'A',CHA+'O'-'A',CHSP
+        defb CHA+'S'-'A',CHA+'T'-'A',CHA+'A'-'A',CHA+'R'-'A'
+        defb CHA+'T'-'A',CHEOS
 
 txtabl: defb CHAST,CHA+'S'-'A',CHA+'C'-'A',CHA+'O'-'A',CHA+'R'-'A'
         defb CHA+'E'-'A',CHSP,CHA+'A'-'A',CHA+'D'-'A',CHA+'V'-'A'

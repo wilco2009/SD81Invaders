@@ -23,6 +23,7 @@ DEMTIME equ 1500                ; tope de la demo (~30 s)
 ; -------------------------------------------------------------
 demrun: ld a,1
         ld (demoon),a
+        ld (nplay),a            ; la maquina juega sola, sin turnos
         ld hl,DEMTIME
         ld (demtim),hl
         call newgam

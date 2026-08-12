@@ -68,10 +68,25 @@ Requiere un core FPGA con soporte de `POKE 2057` (doble buffer).
 
 | Tecla | Acción |
 |-------|--------|
+| `1` / `2` | Empezar partida de uno o dos jugadores (desde la atracción) |
 | `5` | Izquierda |
 | `8` | Derecha |
-| `0` | Disparo, y empezar partida desde la atracción |
+| `0` | Disparo |
 | `Q` | Salir a BASIC |
+
+## Dos jugadores
+
+Como en el arcade, los dos jugadores **no comparten partida: alternan**. Cada uno
+tiene su marcador, sus vidas, su formación y sus escudos, y el turno pasa al otro
+cada vez que uno pierde una nave. Cuando a uno se le acaban, el otro sigue solo.
+
+Eso obliga a guardar y restaurar el estado entero al cambiar de turno, **incluido
+el mapa de bits de los escudos**: cada jugador los tiene erosionados a su manera
+y no valdría repintarlos enteros. El arcade hacía exactamente esto — en su
+desensamblado están las rutinas `RememberShields` y `RestoreShields`.
+
+El bloque del enjambre está declarado contiguo a propósito (`swx`…`swaliv`, 68
+bytes) para poder salvarlo de un solo `LDIR`. Son 454 bytes por jugador.
 
 Son las teclas de cursor de Sinclair, así que el joystick DB9 funciona sin
 tocar el código:

@@ -36,7 +36,14 @@ pldead: call plera
         ld hl,plliv
         dec (hl)
         call drwliv
-        ld a,(plliv)
+
+        ld a,(nplay)            ; a dos, el turno pasa al otro cada
+        cp 2                    ; vez que uno pierde una nave
+        jr nz,pd1
+        call plyswp
+        ret nz                  ; turno cambiado: ya esta todo puesto
+
+pd1:    ld a,(plliv)
         or a
         jr z,pdover
         ld a,PLX0               ; renacer en el centro

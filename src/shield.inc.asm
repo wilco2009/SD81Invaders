@@ -16,6 +16,11 @@ BASW    equ 22                  ; ancho real en pixeles
 BASH    equ 16                  ; alto
 NBASES  equ 4
 
+; Banda que ocupan los cuatro, en columnas de byte. Se usa para
+; guardar y restaurar los escudos al cambiar de turno.
+BASECL  equ BASX0/8
+BASENB  equ ((BASX0+3*BASSEP+BASW-1)/8)-BASECL+1
+
 ; -------------------------------------------------------------
 ; bsdraw - pinta los cuatro escudos
 ; -------------------------------------------------------------

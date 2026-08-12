@@ -526,23 +526,8 @@ ahk1:   call salspr
 ; -------------------------------------------------------------
 ; addscr - suma A (BCD) al marcador del jugador 1 y lo repinta
 ; -------------------------------------------------------------
-addscr: ld e,a
-        ld d,0
-; addsc2 - suma DE (BCD de 4 digitos) al marcador y lo repinta
-addsc2: ld hl,score1
-        ld a,(hl)
-        add a,e
-        daa
-        ld (hl),a
-        inc hl
-        ld a,(hl)
-        adc a,d
-        daa
-        ld (hl),a
-        ld hl,(score1)
-        ld d,ROWSCR
-        ld e,COLS1+2
-        jp prtbcd
+; (addscr y addsc2 viven ahora en players.inc.asm, porque el
+;  marcador al que suman depende de a quien le toque)
 
 ; --- estado del enjambre ---
 swx:    defb SWX0               ; x de la pasada actual
