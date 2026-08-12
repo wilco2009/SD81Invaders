@@ -37,6 +37,7 @@ PGEXAL  equ 24                  ; 10
 PGEXPL  equ 36                  ; 10
 PGSIL   equ 48                  ; 2
 PGSOFF  equ 52                  ; 5
+PGXTRA  equ 58                  ; 13
 
 ; Un canal del PEG por hilo, para que no se estorben:
 ;
@@ -324,6 +325,15 @@ sndexa: ld c,2                  ; explosion de alien
 
 sndexp: ld c,2                  ; explosion de la nave
         ld a,PGEXPL
+        jr sndgo
+
+; La nave extra suena por el hilo del disparo y no por el de las
+; explosiones, que es el unico que seguro esta ocupado: el premio
+; llega justo al sumar los puntos de un alien recien reventado.
+; El laser, en cambio, se lanzo cuando el proyectil salio y para
+; cuando llega arriba ya se ha apagado.
+sndxtr: ld c,0
+        ld a,PGXTRA
 
 ; La direccion se guarda en B y NO en la pila: un pop af
 ; restauraria tambien los flags y se llevaria por delante los del
@@ -377,6 +387,15 @@ datexp: defb 01ch,007h, 014h,006h, 00fh,00ah, 0c8h,090h
         defb 00fh,025h, 0a5h,041h, 03ch,090h, 0fdh,085h
         defb 000h,00ah, 010h,0a0h
 
+; --- Nave extra: canal A, arpegio ascendente de do mayor ---
+; C5 E5 G5 C6, las tres primeras 45 ms y la ultima 90. Deliberada-
+; mente al reves que el laser, que baja: asi el premio no se
+; confunde con un disparo aunque salga por el mismo canal.
+datxtr: defb 01ch,007h, 000h,001h, 00dh,008h, 0c2h,000h
+        defb 02dh,090h, 09ah,000h, 02dh,090h, 082h,000h
+        defb 02dh,090h, 061h,000h, 05ah,090h, 000h,008h
+        defb 010h,0a0h
+
 ; --- Silenciador del canal B, para cortar el OVNI en seco ---
 ;     LD R9,0 / HALT
 datsil: defb 000h,009h, 010h,0a0h
@@ -395,11 +414,13 @@ pgtab:  defw datlas
         defb 20,PGEXAL
         defw datexp
         defb 20,PGEXPL
+        defw datxtr
+        defb 26,PGXTRA
         defw datsil
         defb 4,PGSIL
         defw datsof
         defb 10,PGSOFF
-NPROG   equ 6
+NPROG   equ 7
 
 ; --- estado de la marcha ---
 mchcnt: defb 1                  ; frames que faltan para el compas

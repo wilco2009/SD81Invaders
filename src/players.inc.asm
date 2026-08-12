@@ -241,6 +241,10 @@ addscr: ld e,a
 addsc2: push de
         call scradr
         pop de
+        inc hl
+        ld a,(hl)
+        ld (bonpre),a           ; centenas y millares de antes
+        dec hl
         ld a,(hl)
         add a,e
         daa
@@ -250,6 +254,7 @@ addsc2: push de
         adc a,d
         daa
         ld (hl),a
+        ld (bonpos),a           ; ...y los de despues
         dec hl
         ld e,(hl)
         inc hl
@@ -261,7 +266,41 @@ addsc2: push de
         jr z,adsc1
         ld e,COLS2+2
 adsc1:  ld d,ROWSCR
-        jp prtbcd
+        call prtbcd
+; cae en bonus
+
+; -------------------------------------------------------------
+; bonus - la nave extra de los 1500 puntos
+;
+; En el arcade era una opcion de fabrica, 1000 o 1500 puntos, y de
+; serie venia puesta a 1500. Se da una sola vez por jugador.
+;
+; No hace falta anotar en ningun sitio a quien ya se le ha dado: el
+; marcador nunca baja, asi que haber pasado de 1500 es exactamente
+; lo mismo que valer 1500 o mas. Basta con mirar si el byte alto ha
+; cruzado el 15 al sumar, y como 1500 no tiene decenas ni unidades,
+; el byte bajo no interviene.
+;
+; De regalo, esto sobrevive solo al cambio de turno y a recuperar
+; una partida de la SD: no hay ningun estado que guardar ni que
+; restaurar, porque el propio marcador lo lleva escrito.
+; -------------------------------------------------------------
+XTRAPT  equ 15h                 ; 1500, byte alto en BCD
+MAXLIV  equ 9                   ; el indicador solo pinta un digito
+
+bonus:  ld a,(bonpre)
+        cp XTRAPT
+        ret nc                  ; ya estaba por encima
+        ld a,(bonpos)
+        cp XTRAPT
+        ret c                   ; y sigue por debajo
+        ld a,(plliv)
+        cp MAXLIV
+        ret nc
+        inc a
+        ld (plliv),a
+        call sndxtr
+        jp drwliv
 
 ; -------------------------------------------------------------
 ; hiupd - se queda con la mejor puntuacion de la sesion,
@@ -298,4 +337,6 @@ scorp1: defw 0
 scorp2: defw 0
 hiscor: defw 0
 shdrow: defb 0                  ; fila en curso al copiar escudos
+bonpre: defb 0                  ; byte alto del marcador antes de sumar
+bonpos: defb 0                  ; ...y despues
 plyst:  defs 2*PLYSZ            ; una ranura por jugador
