@@ -25,7 +25,7 @@ UFODIV  equ 1                   ; se mueve uno de cada N frames
 ; minimo entero. Si se toca, hay que ajustar con el las vueltas
 ; del efecto de sonido en datufo: el zumbido tiene que durar
 ; aproximadamente lo mismo que el cruce.
-UFOMIN  equ 9                   ; aliens minimos para que aparezca
+UFOMIN  equ 8                   ; deja de salir con 7 o menos aliens
 UFOWAIT equ 1200                ; frames entre apariciones (~24 s)
 UFOROW  equ 2                   ; fila de texto de la banda del OVNI
 UFSTIME equ 60                  ; frames que se queda la puntuacion
@@ -210,6 +210,16 @@ ufsd2:  call prtchr
 
 ; -------------------------------------------------------------
 ; ufshot - un disparo mas en la cuenta, modulo 15
+;
+; Se llama cuando el disparo DESAPARECE, no cuando sale del cañon.
+; Da igual como se vaya: tocando algo, agotandose arriba o
+; derribado por una bomba. Contarlo al disparar hacia que la
+; cuenta corriera por delante de lo que se ve en pantalla, y con
+; ella la puntuacion del OVNI.
+;
+; En el impacto va antes de repartirlo, de modo que si lo que ha
+; tocado es el propio OVNI, el disparo se cuenta a si mismo antes
+; de consultar la tabla.
 ; -------------------------------------------------------------
 ufshot: ld a,(ufcnt)
         inc a

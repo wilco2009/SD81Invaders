@@ -37,6 +37,7 @@ shupd:  ld a,(shon)
 ; techo del campo, como en el arcade.
 shkill: xor a
         ld (shon),a
+        call ufshot             ; cuenta al estallar, no al salir
         ld hl,dmglas
         ld a,(shx)
         sub 3
@@ -56,7 +57,7 @@ shclr:  ld a,(shon)
         call shera
         xor a
         ld (shon),a
-        ret
+        jp ufshot               ; desaparecer es desaparecer
 
 ; -------------------------------------------------------------
 ; shfire - lanza un disparo si el boton esta pulsado
@@ -79,7 +80,6 @@ shf1:   ld a,(plx)
         ld (shy),a
         ld a,1
         ld (shon),a
-        call ufshot             ; cuenta de disparos para el OVNI
         call sndlas
         jp shdrw
 
@@ -109,6 +109,7 @@ sckhit: ld a,d
         ld (bimx),a
         xor a
         ld (shon),a             ; el disparo desaparece al tocar
+        call ufshot             ; ...y es aqui donde entra en la cuenta
         call shimp
         ld a,1
         or a
