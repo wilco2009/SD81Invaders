@@ -63,8 +63,11 @@ shclr:  ld a,(shon)
 ; -------------------------------------------------------------
 shfire: ld a,(demoon)
         or a
-        jr nz,shf1              ; la maquina dispara siempre que puede
-        call plfire
+        jr z,shfk
+        call demclr             ; la maquina dispara solo con via libre
+        ret nz
+        jr shf1
+shfk:   call plfire
         ret nz                  ; plfire devuelve Z si esta pulsado
 shf1:   ld a,(plx)
         add a,PLW/2             ; centro de la nave

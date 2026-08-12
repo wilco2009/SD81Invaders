@@ -101,7 +101,10 @@ mchoff: xor a
 ; que hacia el arcade: la musica acelera porque queda menos
 ; formacion, no porque haya un temporizador que la empuje.
 ; -------------------------------------------------------------
-sndupd: ld a,(mchdur)           ; apagar la nota al agotar su duracion
+sndupd: ld a,(demoon)           ; la demo va en silencio
+        or a
+        ret nz
+        ld a,(mchdur)           ; apagar la nota al agotar su duracion
         or a
         jr z,mchu1
         dec a
@@ -276,29 +279,39 @@ sndoff: ld a,7
 ; -------------------------------------------------------------
 ; Disparadores de efecto
 ; -------------------------------------------------------------
+; Los cuatro salen por sndgo, que es donde se filtra la demo: la
+; maquina jugando sola va en silencio.
 sndlas: ld c,0                  ; disparo del jugador
         ld a,PGLASR
-        jp pegply
+        jr sndgo
 
 sndufo: ld c,1                  ; zumbido del OVNI
         ld a,PGUFO
+        jr sndgo
+
+sndexa: ld c,2                  ; explosion de alien
+        ld a,PGEXAL
+        jr sndgo
+
+sndexp: ld c,2                  ; explosion de la nave
+        ld a,PGEXPL
+
+sndgo:  push af
+        ld a,(demoon)
+        or a
+        pop af
+        ret nz
         jp pegply
 
 ; Callar el OVNI: pararlo no basta, porque STOP_PEG deja los
 ; registros del AY como estuvieran y la nota se queda sonando.
-; Hay que lanzarle encima el silenciador del canal B.
+; Hay que lanzarle encima el silenciador del canal B. Este no se
+; filtra por demo: parar algo que no suena no hace daño, y asi no
+; puede quedarse un zumbido colgado.
 sndufx: ld c,1
         call pegstp
         ld c,1
         ld a,PGSIL
-        jp pegply
-
-sndexa: ld c,2                  ; explosion de alien
-        ld a,PGEXAL
-        jp pegply
-
-sndexp: ld c,2                  ; explosion de la nave
-        ld a,PGEXPL
         jp pegply
 
 ; -------------------------------------------------------------

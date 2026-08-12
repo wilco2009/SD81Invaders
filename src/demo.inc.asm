@@ -60,6 +60,32 @@ dtg2:   call salpos
         or a
         ret
 
+; -------------------------------------------------------------
+; demclr - Z si la vertical sobre la nave esta libre de escudo
+;
+; Sin esto la IA se pasa la partida disparandole a su propio
+; escudo: abre un tunel a fuerza de impactos, mata unos cuantos
+; aliens a traves de el, y en cuanto el objetivo se desplaza y
+; ella con el, vuelve a tener pared delante y no acierta ni una.
+; Visto de fuera parece que ande buscando el hueco - y es que
+; literalmente lo esta buscando.
+; -------------------------------------------------------------
+demclr: ld a,(plx)
+        add a,PLW/2             ; por donde saldra el disparo
+        ld e,a
+        ld d,BASEY
+        ld b,BASH
+dcl1:   push bc
+        push de
+        call pixtst
+        pop de
+        pop bc
+        ret nz                  ; hay pared: no disparar
+        inc d
+        djnz dcl1
+        xor a
+        ret                     ; via libre
+
 ; dnexti - avanza cidx/ccol/crank una casilla
 dnexti: ld hl,cidx
         inc (hl)

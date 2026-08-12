@@ -139,8 +139,15 @@ pldemo: push bc
         pop bc
         or a
         jp z,plm2               ; sin objetivo: quieta
-        ld a,(cax)
-        add a,4                 ; centro aproximado del alien
+        ld hl,alwid             ; centro real, que depende de la fila
+        ld a,(crow)
+        ld e,a
+        ld d,0
+        add hl,de
+        ld a,(hl)
+        srl a
+        ld hl,cax
+        add a,(hl)
         ld c,a
         ld a,b
         add a,PLW/2             ; centro de la nave
