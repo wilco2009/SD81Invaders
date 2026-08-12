@@ -39,9 +39,10 @@ SWADV  equ 2                   ; avance horizontal por pasada
 SWDROP  equ 8                   ; descenso al tocar el borde
 SWNUM   equ SWROWS*SWCOLS       ; 55
 
-; y del enjambre a la que se considera invasion: la fila de abajo
-; alcanza la altura de la nave
-SWYMAX  equ PLY-(SWROWS-1)*SWDY-8
+; y a la que un alien de la fila 0 (la de arriba) invadiria, o sea
+; cuando su borde inferior alcanza la altura de la nave. Para las
+; demas filas hay que restarle su desplazamiento - lo hace swinv.
+SWYINV  equ PLY-8
 
 ; -------------------------------------------------------------
 ; swinit - formacion completa en su posicion de salida
@@ -247,6 +248,54 @@ sposo:  ld a,(opx)              ; aun sin barrer
         ld a,(opy)
         add a,b
         ld (cay),a
+        ret
+
+; -------------------------------------------------------------
+; swinv - NZ si el enjambre ha llegado a la altura de la nave
+;
+; La altura no se mide con la fila de abajo de la formacion sino
+; con la fila viva mas baja. Son cosas distintas en cuanto muere
+; una fila entera: lo que queda todavia tiene que bajar el resto
+; del camino, y comparando swy a secas se daba la pantalla por
+; invadida en el punto donde HABRIA llegado una fila que ya no
+; existe. Con un solo calamar vivo - que sale en la fila de
+; arriba - eso era GAME OVER con media pantalla por delante.
+;
+; swaliv va por rangos de 11 y el rango 0 es la fila de abajo,
+; asi que el primer bloque con algun vivo es el que manda.
+; -------------------------------------------------------------
+swinv:  ld hl,swaliv
+        ld c,SWROWS-1           ; fila real del rango 0
+        ld d,SWROWS
+svi1:   ld b,SWCOLS
+svi2:   ld a,(hl)
+        inc hl
+        or a
+        jr nz,svi3
+        djnz svi2
+        dec c                   ; rango vacio: la fila viva esta mas arriba
+        dec d
+        jr nz,svi1
+        xor a
+        ret                     ; no queda ninguno
+
+svi3:   ld a,c                  ; y que le corresponde a esa fila
+        add a,a                 ; 2f
+        add a,a                 ; 4f
+        ld b,a
+        add a,a                 ; 8f
+        add a,b                 ; fila * 12 = SWDY
+        ld b,a
+        ld a,SWYINV
+        sub b
+        ld hl,swy
+        cp (hl)
+        jr c,svi4               ; swy la ha pasado...
+        jr z,svi4               ; ...o la ha alcanzado justo
+        xor a
+        ret
+svi4:   ld a,1
+        or a
         ret
 
 ; -------------------------------------------------------------

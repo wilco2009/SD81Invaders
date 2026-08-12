@@ -151,9 +151,8 @@ gmloop: call waitvs
         or a
         call z,nxtwav
 
-        ld a,(swy)              ; el enjambre ha llegado abajo
-        cp SWYMAX
-        jr nc,gmlinv
+        call swinv              ; el enjambre ha llegado abajo
+        jr nz,gmlinv
         ld a,(gover)            ; sin vidas
         or a
         jr nz,gmlend
