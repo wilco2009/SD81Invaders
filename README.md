@@ -262,12 +262,16 @@ si suenan altos o bajos, se ajustan en la tabla `mchton` de `sound.inc.asm`.
 ## Puntuación máxima
 
 Lo único que se aparta del original a propósito: en el arcade el récord moría al
-apagar la máquina, y aquí sobrevive en un fichero `HISCORE` de dos bytes en el
-mismo directorio del juego. Se lee al arrancar y solo se escribe cuando el
+apagar la máquina, y aquí sobrevive en un fichero `HISCORE.HI` de dos bytes en
+el mismo directorio del juego. Se lee al arrancar y solo se escribe cuando el
 récord cambia de verdad, no una vez por partida.
 
-Va **sin extensión** a propósito: el MCU interpreta las que conoce, y una de
-ellas es `.ROM`, que carga en la dirección 0 y resetea la máquina.
+La extensión no es decorativa y **no puede omitirse**: un nombre sin ella se
+trata como `.P`, o sea como un programa BASIC, y los dos bytes no sobrevivirían
+al viaje. Tampoco vale cualquiera — `.ROM` carga en la dirección 0 y resetea la
+máquina, y `.WAV` se reproduce. `.HI` no significa nada para el MCU, que es
+justo lo que se busca. El nombre viaja en ASCII, no en códigos ZX81: al otro
+lado hay una FAT32.
 
 ## Pendiente
 

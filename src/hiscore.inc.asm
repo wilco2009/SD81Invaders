@@ -2,13 +2,18 @@
 ; hiscore.inc.asm - La puntuacion maxima, guardada en la SD
 ;
 ; Esto no estaba en el arcade: alli el record se perdia al apagar
-; la maquina. Aqui sobrevive en un fichero HISCORE de dos bytes,
-; en el mismo directorio desde el que se cargo el juego.
+; la maquina. Aqui sobrevive en un fichero HISCORE.HI de dos
+; bytes, en el mismo directorio desde el que se cargo el juego.
 ;
-; El nombre va sin extension a proposito. El MCU interpreta las
-; que conoce, y una de ellas es .ROM, que carga en la direccion 0
-; y resetea la maquina; sin extension devuelve los bytes crudos,
-; que es lo que hace falta.
+; La extension no es decorativa y no puede omitirse: un nombre sin
+; ella se trata como .P, o sea como un programa BASIC, y los dos
+; bytes no sobrevivirian al viaje. Tampoco vale cualquiera - .ROM
+; carga en la direccion 0 y resetea la maquina, y .WAV se
+; reproduce. .HI no significa nada para el MCU, que es justo lo
+; que se busca: que devuelva los bytes tal cual.
+;
+; El nombre va en ASCII, no en codigos ZX81: al otro lado hay una
+; FAT32.
 ;
 ; Protocolo, como el del PEG: se escriben bytes en el puerto de
 ; datos ($A7) y el bit 7 del de control ($AF) se invierte con
@@ -19,7 +24,7 @@
 ; un fastidio; una partida colgada porque el MCU no contesta, no.
 ; =============================================================
 
-HSNLEN  equ 7                   ; "HISCORE"
+HSNLEN  equ 10                  ; "HISCORE.HI"
 
 ; -------------------------------------------------------------
 ; mcurcv - recibe un byte del MCU. Destruye BC y DE.
@@ -135,7 +140,7 @@ hssave: ld a,CMDSAVE
         jp mcurcv               ; status, que llega tras tocar la SD
 
 ; --- datos ---
-hsname: defb 'H','I','S','C','O','R','E'
+hsname: defb 'H','I','S','C','O','R','E','.','H','I'
 hsval:  defw 0                  ; lo leido del fichero
 hscnt:  defw 0                  ; bytes que quedan por recoger
 hsok:   defb 0                  ; 1 = se leyeron los dos bytes
