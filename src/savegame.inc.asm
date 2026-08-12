@@ -122,7 +122,8 @@ sgsave: call sgquiet
         call pixad
         ld bc,SGGNDB
         call sgsblk
-        jp mcurcv               ; status
+        call mcurcv             ; status
+        jp mcufast
 
 ; =============================================================
 ; Recuperar
@@ -230,13 +231,15 @@ sgload: call sgquiet
         xor a
         ld (shon),a
         ld (exon),a
+        call mcufast
         ld a,1
         or a
         ret                     ; NZ: cargada
 
 sgbad:  call sgdrop             ; longitud rara: tragarse el resto
         call mcurcv             ; y el status
-sgbad2: xor a
+sgbad2: call mcufast
+        xor a
         ret                     ; Z: no se ha cargado
 
 ; -------------------------------------------------------------
@@ -245,7 +248,8 @@ sgbad2: xor a
 ;           por su cuenta durante toda la espera.
 ; -------------------------------------------------------------
 sgquiet: call sndufx
-        jp mchoff
+        call mchoff
+        jp mcuslow              ; y darle a la tarjeta su tiempo
 
 ; --- datos ---
 sgname: defb CHA+'I'-'A',CHA+'N'-'A',CHA+'V'-'A',CHA+'A'-'A'

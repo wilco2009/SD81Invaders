@@ -80,7 +80,8 @@ hsn1:   ld a,(hl)
 ; descuadraria al MCU para todo lo que viniera despues, que en
 ; este juego es el volcado de los efectos al PEG.
 ; -------------------------------------------------------------
-hsload: ld a,CMDLOAD
+hsload: call mcuslow            ; tocar la tarjeta lleva su tiempo
+        ld a,CMDLOAD
         call mcusnd
         call hsnsnd
         xor a
@@ -110,13 +111,13 @@ hsdrp:  call mcurcv             ; lo que sobre, a la basura
 
 hsst:   call mcurcv             ; status
         or a
-        ret nz                  ; no se pudo leer: el record queda a 0
+        jr nz,hsend             ; no se pudo leer: el record queda a 0
         ld a,(hsok)
         or a
-        ret z
+        jr z,hsend
         ld hl,(hsval)
         ld (hiscor),hl
-        ret
+hsend:  jp mcufast              ; el plazo vuelve al del juego
 
 ; hsdec - una unidad menos en hscnt; Z cuando se agota
 hsdec:  ld hl,(hscnt)
@@ -129,7 +130,8 @@ hsdec:  ld hl,(hscnt)
 ; -------------------------------------------------------------
 ; hssave - escribe el record en la SD
 ; -------------------------------------------------------------
-hssave: ld a,CMDSAVE
+hssave: call mcuslow            ; crear el fichero no es instantaneo
+        ld a,CMDSAVE
         call mcusnd
         call hsnsnd
         ld a,2                  ; longitud del bloque
@@ -140,7 +142,8 @@ hssave: ld a,CMDSAVE
         call mcusnd
         ld a,(hiscor+1)
         call mcusnd
-        jp mcurcv               ; status, que llega tras tocar la SD
+        call mcurcv             ; status, que llega tras tocar la SD
+        jp mcufast
 
 ; --- datos ---
 hsname: defb CHA+'H'-'A',CHA+'I'-'A',CHA+'S'-'A',CHA+'C'-'A'

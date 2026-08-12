@@ -56,7 +56,8 @@ PGSOFF  equ 52                  ; 5
 ; sobre el hilo despues de pararlo.
 PEGMIX  equ 1ch                 ; tono A, tono B y ruido C activos
 
-MCUTMO  equ 0                   ; 256 sondeos de reloj por byte
+MCUTMO  equ 400                 ; sondeos por byte durante el juego
+MCUSLW  equ 20000               ; ...y al tocar la SD, unos 250 ms
 
 ; =============================================================
 ; Marcha de fondo, sobre el AY chip A
@@ -191,20 +192,48 @@ mchton: defb 0d1h,003h          ; 977  -> ~104 Hz
 ; sonido. Preferimos perder el sonido antes que el juego.
 ; -------------------------------------------------------------
 mcusnd: push bc
+        push de
         ld b,a
         in a,(MCUCTL)
         and 80h
         ld c,a                  ; reloj antes de escribir
         ld a,b
         out (MCUDAT),a
-        ld b,MCUTMO
+        ld de,(mcuwait)
 mcs1:   in a,(MCUCTL)
         and 80h
         cp c
         jr nz,mcs2              ; ha cambiado: byte aceptado
-        djnz mcs1
-mcs2:   pop bc
+        dec de
+        ld a,d
+        or e
+        jr nz,mcs1
+mcs2:   pop de
+        pop bc
         ret
+
+; -------------------------------------------------------------
+; mcuslow / mcufast - plazo de espera del MCU
+;
+; Tocar la tarjeta lleva milisegundos: crear el fichero, escribir
+; el bloque. Y el firmware lo hace en mitad del dialogo - en
+; cmd_save abre el fichero despues de recibir el nombre y antes
+; de pedir la longitud. Con el plazo corto del juego el Z80 se
+; rinde ahi mismo y a partir de ese punto va desincronizado, que
+; es por lo que no se llegaba a grabar nada.
+;
+; El corto se queda para el PEG, que responde al instante y corre
+; dentro del bucle de frame, donde una espera larga se notaria.
+; -------------------------------------------------------------
+mcuslow: ld hl,MCUSLW
+         ld (mcuwait),hl
+         ret
+
+mcufast: ld hl,MCUTMO
+         ld (mcuwait),hl
+         ret
+
+mcuwait: defw MCUTMO
 
 ; -------------------------------------------------------------
 ; pegld - carga un programa en la memoria del PEG
