@@ -89,9 +89,10 @@ newgam: call blclra             ; sin esto, una explosion viva al acabar
         ld a,(nplay)            ; a dos, anunciar quien abre
         cp 2
         call z,plymsg
-        ld (gover),a
-        ld (shon),a
-        ld (exon),a
+        xor a                   ; A vuelve a cero A PROPOSITO: lo que
+        ld (gover),a            ; sigue son ceros encadenados, y sin
+        ld (shon),a             ; esto se quedaban con el numero de
+        ld (exon),a             ; jugadores dentro
         ld (mchnot),a
         ld a,1
         ld (mchcnt),a
