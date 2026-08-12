@@ -81,7 +81,8 @@ swi1:   ld (hl),a
 ; -------------------------------------------------------------
 swdraw: xor a
         ld (crank),a
-        ld hl,swaliv
+        ld (cidx),a             ; salpos lo necesita para saber si
+        ld hl,swaliv            ; esta casilla ya ha sido barrida
 sdwr:   xor a
         ld (ccol),a
 sdwc:   ld a,(hl)
@@ -91,6 +92,9 @@ sdwc:   ld a,(hl)
         call sdrone
         pop hl
 sdwsk:  inc hl
+        ld a,(cidx)
+        inc a
+        ld (cidx),a
         ld a,(ccol)
         inc a
         ld (ccol),a
@@ -103,18 +107,29 @@ sdwsk:  inc hl
         jr c,sdwr
         ret
 
-; sdrone - dibuja el alien (crank,ccol) en la posicion anterior
-sdrone: call salofs             ; B = desplazamiento y, C = x
-        ld a,(opx)
-        add a,c
-        ld e,a
-        ld a,(opy)
-        add a,b
+; -------------------------------------------------------------
+; sdrone - dibuja el alien (crank,ccol) donde le toque
+;
+; No vale pintarlos todos en la posicion anterior. A mitad de
+; pasada media formacion esta ya en la nueva, y hay que respetarlo
+; o swstep los borrara luego donde no estan: eso es el rastro que
+; dejaban al restaurar una partida de dos jugadores. Al empezar
+; oleada daba igual, porque el barrido esta a cero y todos caen
+; del mismo lado.
+; -------------------------------------------------------------
+sdrone: call salpos             ; deja la posicion en cax/cay
+        ld a,(cay)
         ld d,a
+        ld a,(cax)
+        ld e,a
         push de
+        ld a,(cidx)             ; el fotograma va con la posicion
+        ld hl,swidx
+        cp (hl)
         ld a,(swfrm)
-        xor 1
-        call salspr
+        jr c,sdro1
+        xor 1                   ; aun sin barrer: el anterior
+sdro1:  call salspr
         pop de
         ld b,8
         jp sprdrw
