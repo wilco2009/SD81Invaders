@@ -158,22 +158,11 @@ gmloop: call waitvs
         or a
         jr nz,gmlend
 
-        ld a,(demoon)           ; la demo tiene un tope de tiempo
+        ld a,(demoon)
         or a
-        jr z,gmlk
-        ld hl,(demtim)
-        dec hl
-        ld (demtim),hl
-        ld a,h
-        or l
-        jr nz,gmlk
-        xor a
-        ret                     ; se agoto la demo
+        jr nz,gmldem            ; la demo solo mira su tope de tiempo
 
-        ld a,(demoon)           ; guardar y recuperar, solo jugando
-        or a
-        jr nz,gmlk
-        call sgkey
+        call sgkey              ; jugando: guardar y recuperar
         or a
         jr z,gmlk
         dec a
@@ -181,6 +170,16 @@ gmloop: call waitvs
         call sgsave
         jr gmlk
 gmlld:  call sgload
+        jr gmlk
+
+gmldem: ld hl,(demtim)
+        dec hl
+        ld (demtim),hl
+        ld a,h
+        or l
+        jr nz,gmlk
+        xor a
+        ret                     ; se agoto la demo
 
 gmlk:   call attkey             ; 0 nada, 1/2 jugadores, 3 salir
         cp 3

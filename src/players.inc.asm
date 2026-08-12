@@ -24,7 +24,8 @@
 PLYSW   equ swaliv-swx+SWNUM    ; bloque del enjambre, contiguo
 PLYSP   equ 2                   ; plx y plliv, contiguos
 PLYSH   equ BASENB*BASH         ; banda de escudos
-PLYSZ   equ PLYSW+PLYSP+PLYSH
+PLYSG   equ 32                  ; la linea del suelo, fila entera
+PLYSZ   equ PLYSW+PLYSP+PLYSH+PLYSG
 
 PLYMROW equ 12                  ; "PLAYER n" son 8 caracteres,
 PLYMCOL equ 12                  ; centrados en 32 columnas
@@ -51,7 +52,17 @@ plysav: call plyadr
         ld hl,plx
         ld bc,PLYSP
         ldir
-        jp shsave               ; los escudos, desde la pantalla
+        call shsave             ; los escudos, desde la pantalla
+; sgndsv - y la linea del suelo, que tambien se erosiona y que
+;          cada jugador tiene mordida a su manera
+sgndsv: push de
+        ld d,GNDY
+        ld e,0
+        call pixad
+        pop de
+        ld bc,PLYSG
+        ldir
+        ret
 
 ; -------------------------------------------------------------
 ; plyld - carga la ranura del jugador de turno y repinta
@@ -76,6 +87,7 @@ plyld:  ld a,(curply)
         call hdrini             ; rotulos, marcadores y suelo
         pop hl
         call shload             ; los escudos tal y como los dejo
+        call sgndld             ; y el suelo con sus muescas
         call swdraw             ; su formacion
         call drwliv
         call pldrw
@@ -194,6 +206,19 @@ shl1:   push bc
         pop hl
         pop bc
         djnz shl1
+        ret
+
+; sgndld - devuelve la linea del suelo desde (HL) a la pantalla.
+;          Va despues de hdrini, que la repinta entera y borraria
+;          las muescas.
+sgndld: push hl
+        ld d,GNDY
+        ld e,0
+        call pixad
+        ex de,hl                ; DE = pantalla
+        pop hl                  ; HL = buffer
+        ld bc,PLYSG
+        ldir
         ret
 
 ; -------------------------------------------------------------

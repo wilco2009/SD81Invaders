@@ -200,9 +200,20 @@ sgload: call sgquiet
         ld bc,2
         call sglblk
 
+        xor a                   ; partida de un jugador, desde cero
+        ld (curply),a
+        ld (gover),a
+        ld (scorp2),a
+        ld (scorp2+1),a
+        ld a,1
+        ld (nplay),a
+
         ld d,16                 ; ya se puede tocar la pantalla
         ld b,GNDY-16
         call clrbnd
+        call hdrini             ; ANTES de restaurar el suelo: hdrini
+                                ; repinta la linea entera y borraria
+                                ; las muescas recien cargadas
         call sglsh              ; escudos, a su sitio
         ld d,GNDY               ; linea del suelo, con sus muescas
         ld e,0
@@ -214,14 +225,6 @@ sgload: call sgquiet
         or a
         jr nz,sgbad2
 
-        xor a                   ; partida de un jugador, desde cero
-        ld (curply),a
-        ld (gover),a
-        ld (scorp2),a
-        ld (scorp2+1),a
-        ld a,1
-        ld (nplay),a
-        call hdrini             ; rotulos y marcadores ya cargados
         call swdraw             ; la formacion como estaba
         call drwliv
         call pldrw
