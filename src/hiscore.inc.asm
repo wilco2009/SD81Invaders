@@ -12,8 +12,11 @@
 ; reproduce. .HI no significa nada para el MCU, que es justo lo
 ; que se busca: que devuelva los bytes tal cual.
 ;
-; El nombre va en ASCII, no en codigos ZX81: al otro lado hay una
-; FAT32.
+; El nombre viaja en codigos ZX81, no en ASCII. Lo pide asi el
+; firmware, que al recibirlo lo pasa por su tabla asc81_to_ascii
+; antes de tocar la FAT32 (ver cmd_save y cmd_load en COMMANDS.cpp
+; del interface). Mandarlo ya en ASCII lo hace atravesar esa tabla
+; una segunda vez y llegar convertido en cualquier cosa.
 ;
 ; Protocolo, como el del PEG: se escriben bytes en el puerto de
 ; datos ($A7) y el bit 7 del de control ($AF) se invierte con
@@ -140,7 +143,9 @@ hssave: ld a,CMDSAVE
         jp mcurcv               ; status, que llega tras tocar la SD
 
 ; --- datos ---
-hsname: defb 'H','I','S','C','O','R','E','.','H','I'
+hsname: defb CHA+'H'-'A',CHA+'I'-'A',CHA+'S'-'A',CHA+'C'-'A'
+        defb CHA+'O'-'A',CHA+'R'-'A',CHA+'E'-'A',CHDOT
+        defb CHA+'H'-'A',CHA+'I'-'A'
 hsval:  defw 0                  ; lo leido del fichero
 hscnt:  defw 0                  ; bytes que quedan por recoger
 hsok:   defb 0                  ; 1 = se leyeron los dos bytes

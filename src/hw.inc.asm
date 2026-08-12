@@ -77,6 +77,7 @@ CHLT    equ 19              ; <
 CHEQ    equ 20              ; =
 CHMIN   equ 22              ; -
 CHAST   equ 23              ; *
+CHDOT   equ 27              ; .
 CH0     equ 28              ; '0' .. '9' = 28..37
 CHA     equ 38              ; 'A' .. 'Z' = 38..63
 CHEOS   equ 255             ; terminador de cadena
