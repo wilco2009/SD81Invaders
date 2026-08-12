@@ -26,6 +26,9 @@ PLYSP   equ 2                   ; plx y plliv, contiguos
 PLYSH   equ BASENB*BASH         ; banda de escudos
 PLYSZ   equ PLYSW+PLYSP+PLYSH
 
+PLYMROW equ 12                  ; "PLAYER n" son 8 caracteres,
+PLYMCOL equ 12                  ; centrados en 32 columnas
+
 ; -------------------------------------------------------------
 ; plyadr - HL = ranura del jugador C (0 o 1)
 ; -------------------------------------------------------------
@@ -91,10 +94,34 @@ plyswp: ld a,(curply)
         ret z                   ; al otro no le quedan: sigue este
         ld a,c
         ld (curply),a
+        call plymsg             ; anunciar a quien le toca
         call plyld
         ld a,1
         or a
         ret                     ; NZ: turno cambiado
+
+; -------------------------------------------------------------
+; plymsg - "PLAYER n" un momento, sobre la pantalla despejada.
+;          No hace falta borrarlo: plyld repinta todo detras.
+; -------------------------------------------------------------
+plymsg: ld d,16
+        ld b,GNDY-16
+        call clrbnd
+        ld hl,txply
+        ld d,PLYMROW
+        ld e,PLYMCOL
+        call prtstr
+        ld a,(curply)
+        inc a
+        add a,CH0
+        ld d,PLYMROW
+        ld e,PLYMCOL+7
+        call prtchr
+        ld b,90
+        jp pause
+
+txply:  defb CHA+'P'-'A',CHA+'L'-'A',CHA+'A'-'A',CHA+'Y'-'A'
+        defb CHA+'E'-'A',CHA+'R'-'A',CHSP,CHEOS
 
 ; -------------------------------------------------------------
 ; plyini - arranca una partida: las dos ranuras con el estado

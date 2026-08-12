@@ -86,6 +86,9 @@ newgam: call blclra             ; sin esto, una explosion viva al acabar
         ld (scorp2),hl
         xor a
         ld (curply),a           ; empieza el jugador 1
+        ld a,(nplay)            ; a dos, anunciar quien abre
+        cp 2
+        call z,plymsg
         ld (gover),a
         ld (shon),a
         ld (exon),a

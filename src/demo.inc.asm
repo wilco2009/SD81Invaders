@@ -16,6 +16,14 @@
 ; =============================================================
 
 DEMTIME equ 1500                ; tope de la demo (~30 s)
+DEMTOL  equ 2                   ; margen de punteria, en pixeles
+;
+; Ese margen es lo que impide que la IA malgaste el cañon. Sin el,
+; disparaba en cuanto tenia via libre, aunque estuviera viajando
+; hacia el objetivo siguiente: mataba al de abajo de una columna,
+; el objetivo saltaba a la columna de al lado, y el disparo que ya
+; salia se llevaba al que estaba encima. De ahi que vaciara
+; columnas enteras y luego pareciera disparar a la nada.
 
 ; -------------------------------------------------------------
 ; demrun - una partida jugada por la maquina
@@ -104,4 +112,5 @@ dnx1:   ld (ccol),a
 
 ; --- estado ---
 demoon: defb 0                  ; 1 = esta jugando la maquina
+demlin: defb 0                  ; 1 = encarada al objetivo
 demtim: defw 0                  ; frames que le quedan a la demo

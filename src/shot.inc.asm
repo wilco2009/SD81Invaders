@@ -64,7 +64,10 @@ shclr:  ld a,(shon)
 shfire: ld a,(demoon)
         or a
         jr z,shfk
-        call demclr             ; la maquina dispara solo con via libre
+        ld a,(demlin)           ; la maquina no gasta el disparo si no
+        or a                    ; esta encarada al objetivo
+        ret z
+        call demclr             ; ni si tiene su propio escudo delante
         ret nz
         jr shf1
 shfk:   call plfire

@@ -296,11 +296,14 @@ sndexa: ld c,2                  ; explosion de alien
 sndexp: ld c,2                  ; explosion de la nave
         ld a,PGEXPL
 
-sndgo:  push af
+; La direccion se guarda en B y NO en la pila: un pop af
+; restauraria tambien los flags y se llevaria por delante los del
+; or a, que es justo lo que hay que mirar.
+sndgo:  ld b,a
         ld a,(demoon)
         or a
-        pop af
-        ret nz
+        ret nz                  ; en la demo, silencio
+        ld a,b
         jp pegply
 
 ; Callar el OVNI: pararlo no basta, porque STOP_PEG deja los

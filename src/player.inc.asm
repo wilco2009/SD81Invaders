@@ -144,10 +144,13 @@ plm2:   ld a,(plx)
 pldemo: push bc
         call demtgt
         pop bc
-        or a
-        jp z,plm2               ; sin objetivo: quieta
-        ld hl,alwid             ; centro real, que depende de la fila
-        ld a,(crow)
+        xor a
+        ld (demlin),a           ; de entrada, sin punteria
+        jr nz,pldm0
+        jp plm2                 ; sin objetivo: quieta
+
+pldm0:  ld hl,alwid             ; C = centro real del objetivo,
+        ld a,(crow)             ; que depende de la fila
         ld e,a
         ld d,0
         add hl,de
@@ -156,10 +159,21 @@ pldemo: push bc
         ld hl,cax
         add a,(hl)
         ld c,a
-        ld a,b
-        add a,PLW/2             ; centro de la nave
+
+        ld a,b                  ; centro de la nave
+        add a,PLW/2
+        ld e,a
+        sub c                   ; distancia al objetivo, en valor
+        jr nc,pldm1             ; absoluto
+        neg
+pldm1:  cp DEMTOL+1
+        jr nc,pldm2
+        ld a,1                  ; encarada: ya puede disparar
+        ld (demlin),a
+
+pldm2:  ld a,e
         cp c
-        jp z,plm2               ; ya esta alineada
+        jp z,plm2               ; clavada
         jr c,pldmr
         ld a,b                  ; el objetivo queda a la izquierda
         cp PLXMIN+1
