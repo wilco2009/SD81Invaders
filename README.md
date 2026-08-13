@@ -427,8 +427,28 @@ Refinamientos posibles:
   `b`.
 - Probado en el emulador EightyOne con emulación SD81 y en hardware real.
 
-## Créditos
+## Licencia
 
-Space Invaders es obra original de Tomohiro Nishikado para Taito (1978). Esta es
-una reimplementación desde cero para ZX81 con SD81 Booster.
+El código Z80 original de este proyecto —el motor, el manejo del SD81 Booster,
+los programas de sonido del PEG y la documentación— está bajo [licencia
+MIT](LICENSE). Reutilízalo.
+
+La licencia **no cubre el material derivado de la ROM de 1978**, porque no es
+mío y no puedo cederlo: los bitmaps de `sprites.inc.asm` y `shield.inc.asm`, y
+las tablas de comportamiento transcritas en `ufo.inc.asm` y `bomb.inc.asm`.
+Están aquí por interoperabilidad y preservación. Quien reutilice este código
+para otra cosa debería sustituirlos por material propio.
+
+## Créditos y marcas
+
+Space Invaders es obra original de **Tomohiro Nishikado** para **Taito** (1978).
+Esta es una reimplementación desde cero para ZX81 con SD81 Booster.
+
+Proyecto **no oficial**, sin relación ni respaldo de Taito Corporation ni de
+Square Enix. *Space Invaders* y *Taito* son marcas de sus respectivos titulares,
+y se usan aquí de forma descriptiva para identificar la obra que se replica. Sin
+ánimo de lucro, con fines educativos y de preservación.
+
+El desensamblado anotado del arcade que se ha usado como referencia es el de
+[Computer Archeology](https://computerarcheology.com/Arcade/SpaceInvaders/).
 
