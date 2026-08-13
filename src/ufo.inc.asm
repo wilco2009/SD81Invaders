@@ -1,9 +1,22 @@
 ; =============================================================
 ; ufo.inc.asm - La nave nodriza
 ;
-; Cruza la banda superior a intervalos, alternando el lado de
-; entrada, y solo mientras queden mas de UFOMIN aliens: en el
-; arcade deja de salir cuando la formacion esta casi barrida.
+; Cruza la banda superior a intervalos, y solo mientras queden mas
+; de UFOMIN aliens: en el arcade deja de salir cuando la formacion
+; esta casi barrida.
+;
+; El lado por el que entra no se alterna: sale de la paridad del
+; contador de disparos ($0462 en el desensamblado, AND 01 sobre
+; shotCountLSB). Impar entra por la izquierda y par por la
+; derecha. O sea que el lado tambien es predecible, igual que la
+; puntuacion, y por el mismo motivo: quien lleve la cuenta de sus
+; disparos sabe de antemano por donde va a asomar.
+;
+; Ese contador es distinto del que indexa la tabla de puntuacion.
+; El arcade lleva dos: sauScoreLSB, que da la vuelta cada 15
+; entradas, y shotCountLSB, que corre libre y del que solo importa
+; el bit 0. Compartir uno solo estropearia la paridad, porque 15
+; es impar y al dar la vuelta se saltaria un cambio de lado.
 ;
 ; La puntuacion no es fija. El arcade llevaba la cuenta de los
 ; disparos del jugador y consultaba una tabla de 15 entradas con
@@ -35,7 +48,6 @@ UFSTIME equ 60                  ; frames que se queda la puntuacion
 ; -------------------------------------------------------------
 ufoini: xor a
         ld (ufon),a
-        ld (ufsid),a
         ld (ufcnt),a
         ld (ufstim),a
         ld hl,UFOWAIT
@@ -84,16 +96,14 @@ ufowt:  ld hl,(ufotim)          ; contar hasta la siguiente salida
 ufospw: ld a,(swleft)
         cp UFOMIN
         jr c,ufors              ; queda poca formacion: no sale
-        ld a,(ufsid)
-        xor 1
-        ld (ufsid),a
-        or a
+        ld a,(ufsht)            ; el lado sale de la paridad de los
+        and 1                   ; disparos, no de una alternancia
         jr z,ufsder
-        ld a,FLDL               ; entra por la izquierda
+        ld a,FLDL               ; impar: entra por la izquierda
         ld (ufox),a
         ld a,UFOSPD
         jr ufson
-ufsder: ld a,FLDR-UFOW          ; entra por la derecha
+ufsder: ld a,FLDR-UFOW          ; par: entra por la derecha
         ld (ufox),a
         ld a,-UFOSPD
 ufson:  ld (ufodir),a
@@ -221,7 +231,9 @@ ufsd2:  call prtchr
 ; tocado es el propio OVNI, el disparo se cuenta a si mismo antes
 ; de consultar la tabla.
 ; -------------------------------------------------------------
-ufshot: ld a,(ufcnt)
+ufshot: ld hl,ufsht
+        inc (hl)                ; cuenta libre, aparte de la de la tabla
+        ld a,(ufcnt)
         inc a
         cp 15
         jr c,ufs1
@@ -267,8 +279,8 @@ ufon:   defb 0                  ; 1 = OVNI en pantalla
 ufox:   defb 0
 ufodir: defb UFOSPD             ; sentido de marcha
 ufotim: defw UFOWAIT            ; frames hasta la siguiente salida
-ufsid:  defb 0                  ; alterna el lado de entrada
 ufcnt:  defb 0                  ; disparos del jugador, modulo 15
+ufsht:  defb 0                  ; ...y sin modulo, para el lado de entrada
 ufoct:  defb UFODIV             ; frames que faltan para avanzar
 ufsval: defw 0                  ; puntuacion que se esta mostrando
 ufscol: defb 0                  ; columna donde se muestra
