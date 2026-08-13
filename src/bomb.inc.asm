@@ -7,7 +7,10 @@
 ; que tenga companeros debajo.
 ;
 ; Cada ranura lleva su propia cuenta atras de recarga, escalonada
-; al arrancar para que las tres no disparen a la vez.
+; al arrancar para que las tres no disparen a la vez. Lo que dura
+; esa cuenta no es fijo: sale de la puntuacion del jugador, que es
+; de donde el arcade sacaba toda su curva de dificultad. Ver
+; bmrate.
 ;
 ; NOTA: los bitmaps de los tres tipos estan dibujados a ojo. La
 ; mecanica (tres tipos, tres ranuras, cuatro fotogramas) es la del
@@ -20,7 +23,6 @@ BMSPD   equ 2                   ; px por frame
 BMH     equ 7                   ; alto del proyectil
 BMW     equ 3                   ; ancho
 BMBOT   equ 184                 ; tope inferior de seguridad
-BMRELO  equ 80                  ; frames de recarga
 ;
 ; A 4 px por frame el proyectil cubria el hueco hasta la nave en
 ; unos 18 frames: un tercio de segundo para reaccionar. El arcade
@@ -32,6 +34,52 @@ BMRELO  equ 80                  ; frames de recarga
 ; entre frame y frame es exactamente la que se comprueba.
 
 ; Campos de la ranura (IX): 0=activa 1=x 2=y 3=tipo 4=frame 5=recarga
+
+; -------------------------------------------------------------
+; bmrate - A = frames de recarga segun la puntuacion en curso
+;
+; La curva de dificultad del arcade entera esta aqui. El original
+; consultaba una tabla de cinco valores con el byte alto del
+; marcador, que al ser BCD son directamente los millares y las
+; centenas, asi que los cortes caen en cifras redondas: 200, 1000,
+; 2000 y 3000 puntos. De 48 frames a 7 hay casi siete veces mas
+; fuego alien, y no cambia ninguna otra cosa - los aliens no se
+; mueven mas rapido por estar mas avanzada la partida, es que
+; disparan mucho mas.
+;
+; Los valores son los del arcade tal cual (30h 10h 0Bh 08h 07h) y
+; no estan escalados a los 50 Hz del ZX81. Alli eran 60, o sea que
+; aqui cada escalon dura una quinta parte mas de tiempo real: es
+; un pelo mas benevolo que el original, no mas duro.
+;
+; Cuenta la puntuacion del jugador de turno, no la mayor de los
+; dos: a dos jugadores cada uno tiene su propia dificultad, como
+; en el original.
+; -------------------------------------------------------------
+bmrate: call scradr
+        inc hl
+        ld a,(hl)               ; centenas y millares, en BCD
+        ld hl,bmrtab
+        cp 002h
+        jr c,bmrt1              ; menos de 200
+        inc hl
+        cp 010h
+        jr c,bmrt1              ; menos de 1000
+        inc hl
+        cp 020h
+        jr c,bmrt1              ; menos de 2000
+        inc hl
+        cp 030h
+        jr c,bmrt1              ; menos de 3000
+        inc hl
+bmrt1:  ld a,(hl)
+        ret
+
+bmrtab: defb 48                 ; hasta 199 puntos
+        defb 16                 ; hasta 999
+        defb 11                 ; hasta 1999
+        defb 8                  ; hasta 2999
+        defb 7                  ; de 3000 en adelante
 
 ; -------------------------------------------------------------
 ; bminit - ranuras vacias con las recargas escalonadas
@@ -61,7 +109,8 @@ bmc1:   push bc
         jr z,bmc2
         call bmera
         ld (ix+0),0
-        ld (ix+5),BMRELO
+        call bmrate
+        ld (ix+5),a
 bmc2:   pop bc
         ld de,BMSZ
         add ix,de
@@ -107,7 +156,8 @@ bmone:  ld a,(ix+0)
         jp bmdrw
 
 bmoff:  ld (ix+0),0
-        ld (ix+5),BMRELO
+        call bmrate
+        ld (ix+5),a
         ret
 
 ; Con la cuenta ya a cero se reintenta cada frame: si bmfire falla
@@ -211,7 +261,8 @@ bckhit: pop bc                  ; descartar el contador de lineas
         ld a,(bcky)
         ld (bimy),a
         ld (ix+0),0             ; la bomba desaparece al tocar
-        ld (ix+5),BMRELO
+        call bmrate
+        ld (ix+5),a
         call bmimp
         ld a,1
         or a
