@@ -1,0 +1,102 @@
+name: Ensamblar
+
+# Se ensambla en cada empujon a main y en cada pull request, para que un
+# fallo de ensamblado salte en el momento y no al ir a publicar. Al empujar
+# un tag vX.Y ademas se adjunta el binario a la release correspondiente.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+env:
+  # zmac del propio autor, clavado a un commit para que el binario sea
+  # reproducible. Al subirlo hay que comprobar que el tamano de
+  # INVADERS.BIN no cambia: un ensamblador distinto que produzca otra
+  # salida es justo lo que no queremos que pase sin enterarnos.
+  ZMAC_REPO: gp48k/zmac
+  ZMAC_SHA: 050bbb1f9c608693d53b8827b991b5a9edc97a6b
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write        # hace falta para adjuntar el asset a la release
+
+    steps:
+      - name: Traer el juego
+        uses: actions/checkout@v4
+
+      - name: Traer zmac
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.ZMAC_REPO }}
+          ref: ${{ env.ZMAC_SHA }}
+          path: zmac-src
+
+      - name: Compilar zmac
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bison
+          # Solo el ejecutable: el objetivo 'all' construye ademas la
+          # pagina de manual, que aqui no sirve de nada. Y sin -j, que el
+          # propio Makefile avisa de que el build paralelo se rompe.
+          make -C zmac-src/src zmac
+          zmac-src/src/zmac --version || true
+
+      - name: Ensamblar
+        run: |
+          cd src
+          "$GITHUB_WORKSPACE/zmac-src/src/zmac" invaders.asm
+
+      - name: Recoger el binario
+        id: bin
+        run: |
+          test -s src/zout/invaders.cim || {
+            echo "::error::zmac no ha dejado salida en src/zout/invaders.cim"
+            exit 1
+          }
+          cp src/zout/invaders.cim INVADERS.BIN
+          size=$(stat -c%s INVADERS.BIN)
+          sha=$(sha256sum INVADERS.BIN | cut -d' ' -f1)
+          echo "size=$size" >> "$GITHUB_OUTPUT"
+          # El binario carga en 25000 ($61A8) y el bitmap de pantalla
+          # empieza en $8000 (32768), asi que el techo fisico son 7768
+          # bytes. Pasarse no da error de ensamblado: da pantalla negra.
+          if [ "$size" -gt 7768 ]; then
+            echo "::error::INVADERS.BIN ocupa $size bytes y pisaria la pantalla en \$8000"
+            exit 1
+          fi
+          {
+            echo "### INVADERS.BIN"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Tamano | $size bytes |"
+            echo "| Margen hasta \$8000 | $((7768 - size)) bytes |"
+            echo "| SHA-256 | \`$sha\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publicar como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: INVADERS.BIN
+          path: INVADERS.BIN
+          if-no-files-found: error
+
+      - name: Adjuntar a la release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          # Sirve tanto si la release ya existe -tag empujado desde la web-
+          # como si el tag llega primero desde la linea de comandos.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" INVADERS.BIN --clobber
+          else
+            gh release create "$TAG" INVADERS.BIN \
+              --title "$TAG" \
+              --generate-notes
+          fi
