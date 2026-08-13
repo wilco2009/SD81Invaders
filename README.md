@@ -1,5 +1,7 @@
 # Space Invaders — ZX81 + SD81 Booster
 
+[![Ensamblar](https://github.com/wilco2009/SD81Invaders/actions/workflows/build.yml/badge.svg)](https://github.com/wilco2009/SD81Invaders/actions/workflows/build.yml)
+
 Réplica del arcade de Taito de 1978, escrita desde cero en Z80 para el interface
 SD81 Booster.
 
@@ -46,6 +48,15 @@ build.bat
 ```
 
 Deja `INVADERS.BIN` en la raíz del proyecto.
+
+También se ensambla en GitHub Actions con cada empujón, y al empujar un tag
+`vX.Y` el binario se adjunta solo a la release. La CI compila `zmac` del
+repositorio de su autor clavado a un commit concreto, así que el `.BIN` que se
+publica es reproducible: coincide byte a byte con el que sale de `build.bat`.
+
+Además comprueba que el binario no rebase los 7768 bytes que hay entre el `org`
+y el bitmap de pantalla en `$8000`. Pasarse de ahí no da error de ensamblado:
+da pantalla negra.
 
 ## Ejecutar
 
