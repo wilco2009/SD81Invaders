@@ -1,12 +1,21 @@
 # Space Invaders — ZX81 + SD81 Booster
 
-Réplica del arcade de Taito de 1978, escrita desde cero en Z80 para el
-[SD81 Booster](../SD81-Booster/README.md).
+Réplica del arcade de Taito de 1978, escrita desde cero en Z80 para el interface
+SD81 Booster.
 
-Estado: **completo**. Modo de atracción con la broma de la Y, la `SCORE ADVANCE
-TABLE` y la máquina jugando sola; enjambre, disparo, escudos destructibles,
-proyectiles alien, vidas, explosiones, oleadas sucesivas, OVNI con su puntuación
-y sonido. Todos los gráficos salen de la ROM original de Taito.
+Estado: **completo y probado en hardware real**. Modo de atracción con la broma
+de la Y, la `SCORE ADVANCE TABLE` y la máquina jugando sola; enjambre, disparo,
+escudos destructibles, proyectiles alien con las tres estrategias del original,
+uno o dos jugadores por turnos, vidas, nave extra a los 1500, explosiones,
+oleadas sucesivas que arrancan más abajo, dificultad creciente con la
+puntuación, OVNI con su puntuación y su lado de entrada predecibles, y sonido.
+
+Todos los gráficos y las tablas de comportamiento salen de la ROM original de
+Taito, contrastados contra el desensamblado anotado de
+[Computer Archeology](https://computerarcheology.com/Arcade/SpaceInvaders/).
+
+Dos cosas se apartan del original a propósito, y las dos son añadidos: el récord
+sobrevive en la SD, y se puede guardar y recuperar la partida.
 
 ## Por qué el SD81 Booster
 
@@ -20,7 +29,9 @@ pantalla. Sobre esa base:
 | Doble buffer AUTO (`POKE 2057,173`) | Imagen sólida sin parpadeo; front buffer en el bloque 5 |
 | Color Chroma81 (`OUT $7FEF`) | Bandas de color que reproducen la lámina del arcade |
 | Joystick DB9 programable | Controles sin código específico (ver más abajo) |
-| PEG (3 hilos, sin coste de CPU) | Marcha de fondo y efectos — *pendiente* |
+| PEG (3 hilos, sin coste de CPU) | Efectos: disparo, OVNI, explosiones y nave extra |
+| AY hardware ZonX-81 (`$DF`/`$1F`) | Marcha de fondo de cuatro tonos |
+| Tarjeta SD (comandos `LOAD`/`SAVE` del MCU) | Récord y partida guardada |
 
 Los escudos destructibles, que en modo carácter del ZX81 serían el problema
 difícil, aquí son un `AND` de máscara sobre el bitmap.
@@ -43,9 +54,9 @@ EightyOne-CrossPlatform con emulación SD81) y desde BASIC:
 
 ```basic
 10 FAST
-20 LOAD THEN CLEAR 29999
-30 LOAD FAST 'INVADERS.BIN' CODE 30000
-40 RAND USR 30000
+20 LOAD THEN CLEAR 24999
+30 LOAD FAST "INVADERS.BIN" CODE 25000
+40 RAND USR 25000
 50 SLOW
 ```
 
@@ -56,10 +67,10 @@ Dos detalles que no son opcionales:
 - **`FAST` antes del `USR`**: en `SLOW` el generador de NMI del ZX81 sigue
   activo, el `DI` del juego no lo puede parar —la NMI es no enmascarable— y el
   temporizado del bucle se va al traste.
-- **`CLEAR 29999`** baja RAMTOP por debajo del código para que el BASIC no lo
+- **`CLEAR 24999`** baja RAMTOP por debajo del código para que el BASIC no lo
   pise. Si se cambia el `org`, hay que cambiar el `CLEAR` con él.
 
-La dirección de carga y la de salto son la misma, 30000 — el binario es un blob
+La dirección de carga y la de salto son la misma, 25000 — el binario es un blob
 crudo sin cabecera, y `start:` es lo primero tras el `org`.
 
 Requiere un core FPGA con soporte de `POKE 2057` (doble buffer).
@@ -88,7 +99,8 @@ y no valdría repintarlos enteros. El arcade hacía exactamente esto — en su
 desensamblado están las rutinas `RememberShields` y `RestoreShields`.
 
 El bloque del enjambre está declarado contiguo a propósito (`swx`…`swaliv`, 68
-bytes) para poder salvarlo de un solo `LDIR`. Son 454 bytes por jugador.
+bytes) para poder salvarlo de un solo `LDIR`. Son 486 bytes por jugador: 68 del
+enjambre, 2 de nave y vidas, 384 de escudos y 32 de la línea del suelo.
 
 Son las teclas de cursor de Sinclair, así que el joystick DB9 funciona sin
 tocar el código:
@@ -111,19 +123,23 @@ src/
 ├── sprites.inc.asm   ← bitmaps del arcade y tablas por fila
 ├── swarm.inc.asm     ← los 55 aliens: barrido, oleada, rebote y descenso
 ├── player.inc.asm    ← nave, controles, vidas y muerte
+├── players.inc.asm   ← uno o dos jugadores por turnos, marcadores y nave extra
 ├── shot.inc.asm      ← disparo del jugador y reparto de impactos
 ├── shield.inc.asm    ← los cuatro escudos y su erosión
-├── bomb.inc.asm      ← proyectiles alien: tres ranuras, tres tipos
+├── bomb.inc.asm      ← proyectiles alien: tres ranuras, tres estrategias
 ├── explode.inc.asm   ← explosiones de alien y de nave
-├── ufo.inc.asm       ← nave nodriza y su puntuación
+├── ufo.inc.asm       ← nave nodriza, su puntuación y su lado de entrada
 ├── sound.inc.asm     ← marcha en el AY, protocolo MCU y efectos PEG
 ├── attract.inc.asm   ← título, la broma de la Y y SCORE ADVANCE TABLE
-└── demo.inc.asm      ← la IA que juega sola en la atracción
+├── demo.inc.asm      ← la IA que juega sola en la atracción
+├── hiscore.inc.asm   ← el récord, en un fichero de la SD
+└── savegame.inc.asm  ← guardar y recuperar la partida
 ```
 
 El ciclo de la máquina es **atracción → demo → partida → atracción**, y las tres
-fases devuelven lo mismo: 0 si nadie pulsó nada, 1 para empezar partida de
-verdad, 2 para salir a BASIC.
+fases hablan el mismo idioma en `A`: 0 si nadie pulsó nada, 1 o 2 para empezar
+partida con ese número de jugadores, 3 para salir a BASIC y 4 para recuperar una
+partida de la SD.
 
 La demo **no tiene bucle propio**: corre el mismo `gmloop` de la partida real
 con `demoon` a 1, y son `plmove` y `shfire` los que dejan de leer el teclado y
@@ -143,14 +159,13 @@ No hace falta borrar ni repintar la Y del rótulo en los relevos: el calamar la
 lleva en `x-8`, que en los extremos de cada tramo cae clavado en su sitio. La Y
 que arrastra es literalmente la que estaba escrita.
 
-El ciclo de la máquina es **atracción → partida → atracción**, y ambas fases
-devuelven `Z` cuando el jugador pide salir. Hasta que hubo modo de atracción no
-existía un "empezar partida nueva": el binario se cargaba, se jugaba una vez y
-se salía, así que el estado inicial venía en los propios datos. Ahora `newgam`
-devuelve a su sitio la oleada, la altura de salida del enjambre, las vidas y los
-marcadores — sin eso, la segunda partida empezaría donde acabó la primera.
+Hasta que hubo modo de atracción no existía un "empezar partida nueva": el
+binario se cargaba, se jugaba una vez y se salía, así que el estado inicial venía
+en los propios datos. Ahora `newgam` devuelve a su sitio la oleada, la altura de
+salida del enjambre, las vidas y los marcadores — sin eso, la segunda partida
+empezaría donde acabó la primera.
 
-El binario ocupa 3651 bytes en `$61A8`–`$6FEB`, con 4117 bytes de margen hasta
+El binario ocupa 6357 bytes en `$61A8`–`$7A7C`, con 1411 bytes de margen hasta
 `$8000`, donde empieza el bitmap de pantalla. Al agotarlo habrá que bajar el
 `org` **y el `CLEAR` del cargador a la vez**: cargar en una dirección código
 ensamblado para otra da pantalla negra, porque el primer `call` ya salta a donde
@@ -211,11 +226,66 @@ real, porque no hay solapamiento cromático entre sprites.
 de aliens vivos, no de un temporizador: la música corre más porque queda menos
 formación. Es el mismo mecanismo que hace acelerar al enjambre.
 
-**El OVNI no vale lo que parece.** El arcade llevaba la cuenta de los disparos
-del jugador y consultaba con ella una tabla de 15 entradas, así que la
-puntuación parecía aleatoria pero era perfectamente predecible — de ahí la
-técnica conocida de contar disparos para cazar el OVNI de 300 puntos. La tabla
-está reproducida en `ufo.inc.asm`.
+**El OVNI no vale lo que parece, y tampoco sale por donde parece.** El arcade
+llevaba la cuenta de los disparos del jugador y consultaba con ella una tabla de
+15 entradas, así que la puntuación parecía aleatoria pero era perfectamente
+predecible — de ahí la técnica conocida de contar disparos para cazar el OVNI de
+300 puntos. El lado de entrada sale del **bit 0** de un contador de disparos
+distinto: impar entra por la izquierda, par por la derecha. Hacen falta los dos
+contadores, porque 15 es impar y compartir uno solo se saltaría un cambio de
+lado en cada vuelta.
+
+Los disparos se cuentan **al desaparecer el proyectil, no al dispararlo**, y da
+igual cómo desaparezca: reventando contra un alien, mordiendo un escudo,
+derribado por una bomba o estrellándose contra el techo del campo.
+
+**La dificultad sube con el marcador, y solo con eso.** El arcade consultaba una
+tabla de cinco valores con el byte alto de la puntuación, que al ser BCD son
+directamente los millares y las centenas:
+
+| Puntuación | Frames de recarga |
+|---|---|
+| hasta 199 | 48 |
+| hasta 999 | 16 |
+| hasta 1999 | 11 |
+| hasta 2999 | 8 |
+| 3000 en adelante | 7 |
+
+De un extremo al otro hay casi siete veces más fuego alien. No cambia nada más:
+los aliens no se mueven más rápido por ir la partida avanzada, es que disparan
+mucho más. Cuenta la puntuación del jugador de turno, así que a dos jugadores
+cada uno arrastra su propia dificultad.
+
+**Las tres bombas no son la misma con otro dibujo.** Lo que las distingue en el
+original es cómo eligen columna, y el tipo va pegado a la ranura — las tres que
+puede haber en vuelo son siempre una de cada clase:
+
+| Proyectil | Cómo elige columna |
+|---|---|
+| Rolling | La que tiene encima al jugador |
+| Plunger | Índices 00–0F de la tabla de columnas |
+| Squiggly | Índices 06–14 de la **misma** tabla |
+
+La tabla es la del arcade, copiada de `$1D00`: una sola de 21 entradas con los
+dos tramos solapados y de largos 16 y 15, primos entre sí, así que el patrón
+conjunto no se repite hasta 240 disparos. Numera las columnas de 1 a 11 y no es
+uniforme — la columna 1 sale siete veces de dieciséis en el tramo del plunger.
+
+Ninguno de los tres busca una columna alternativa: si la que le toca está ya
+barrida, **ese tiro no sale**. Es lo que hace el original, y es también lo que
+permite comprarse un respiro despejando la columna que tienes encima. El plunger
+además calla cuando queda un solo alien.
+
+**La nave extra a los 1500.** En el arcade era una opción de fábrica —1000 o
+1500 puntos, y de serie venía a 1500— y se da una sola vez por jugador. No hace
+falta anotar a quién ya le tocó: el marcador nunca baja, así que haber pasado de
+1500 es exactamente lo mismo que valer 1500 o más. Por eso sobrevive solo al
+cambio de turno y a recuperar una partida de la SD.
+
+**La invasión se mide con quien queda vivo.** El fin de partida por invasión no
+mira dónde estaría la fila de abajo, sino dónde está la fila viva más baja. Con
+la formación entera son lo mismo; con un solo alien superviviente en la fila de
+arriba, no.
 
 ## Sonido
 
@@ -226,7 +296,7 @@ del MCU. No comparten registros, así que se pueden usar a la vez sin pisarse.
 | Generador | Canal | Registros | Uso |
 |---|---|---|---|
 | AY chip A (`$DF`/`$1F`) | A, tono | `R0`/`R1`, `R8` | Marcha de fondo |
-| PEG hilo 0 | A, tono | `R0`/`R1`, `R8` | Disparo del jugador |
+| PEG hilo 0 | A, tono | `R0`/`R1`, `R8` | Disparo del jugador y nave extra |
 | PEG hilo 1 | B, tono | `R2`/`R3`, `R9` | OVNI |
 | PEG hilo 2 | C, ruido | `R6`, `R10` | Explosiones |
 
@@ -272,8 +342,13 @@ La extensión no es decorativa y **no puede omitirse**: un nombre sin ella se
 trata como `.P`, o sea como un programa BASIC, y los dos bytes no sobrevivirían
 al viaje. Tampoco vale cualquiera — `.ROM` carga en la dirección 0 y resetea la
 máquina, y `.WAV` se reproduce. `.HI` no significa nada para el MCU, que es
-justo lo que se busca. El nombre viaja en ASCII, no en códigos ZX81: al otro
-lado hay una FAT32.
+justo lo que se busca: que devuelva los bytes tal cual.
+
+El nombre viaja en **códigos ZX81, no en ASCII**, aunque al otro lado haya una
+FAT32. Lo pide así el firmware, que al recibirlo lo pasa por su tabla
+`asc81_to_ascii` antes de tocar la tarjeta (ver `cmd_save` y `cmd_load` en
+`COMMANDS.cpp` del interface). Mandarlo ya en ASCII lo hace atravesar esa tabla
+una segunda vez y llegar convertido en cualquier cosa.
 
 ## Guardar la partida
 
@@ -303,7 +378,25 @@ para todo lo que viniera después.
 
 ## Pendiente
 
-Nada del arcade original queda por hacer. Posibles refinamientos:
+Del repaso contra el desensamblado quedan tres cosas, todas menores y decididas
+a conciencia:
+
+- **Los bitmaps de las tres bombas están dibujados a ojo.** La mecánica es la del
+  arcade y las tablas también, pero los píxeles exactos siguen sin contrastar
+  contra la ROM. Es lo único del juego que no sale de ella.
+- **Las bombas no aceleran** al quedar 8 aliens o menos (el arcade pasa de 4 a 5
+  px por paso). Aquí van a 2 px por frame constantes.
+- **No hay pausa de dos segundos al empezar la partida.** Tras morir sí la hay.
+
+Y dos diferencias estructurales que no son descuidos:
+
+- La recarga es un contador **por ranura**; el arcade compara contra los pasos de
+  los otros dos disparos, o sea que su cadencia es global.
+- Las alturas de salida por oleada bajan 8 px linealmente cinco veces. El arcade
+  usa una tabla (`$78`, `$50`, `$48`, `$48`, `$40`…) que no es portable tal cual
+  con el eje vertical comprimido a 192 líneas.
+
+Refinamientos posibles:
 
 - La IA de la demo no esquiva bombas: se limita a perseguir y disparar.
 - El destello del alien alcanzado es un solo fotograma fijo; podría animarse.
@@ -325,10 +418,14 @@ Nada del arcade original queda por hacer. Posibles refinamientos:
 - El texto usa los glifos de la ROM del ZX81 en `$1E00` como andamiaje. La
   tipografía propia del arcade se puede sustituir en `text.inc.asm` sin tocar
   nada más.
+- Las tablas de comportamiento —puntuación del OVNI, columnas de fuego, recarga
+  por puntuación— están copiadas del desensamblado anotado de Computer
+  Archeology, con la dirección original anotada en el fuente.
 - `zmac` no distingue mayúsculas en los símbolos: cuidado al nombrar equates y
-  etiquetas parecidas (`SWSTEP` / `swstep` colisionan).
-- El código ensambla limpio y los datos de sprites están verificados, pero
-  **todavía no se ha ejecutado en emulador ni en hardware real**.
+  etiquetas parecidas (`SWSTEP` / `swstep` colisionan, y también `BONUS` /
+  `bonus`). Tampoco admite literales binarios con `%`; hay que usar el sufijo
+  `b`.
+- Probado en el emulador EightyOne con emulación SD81 y en hardware real.
 
 ## Créditos
 
