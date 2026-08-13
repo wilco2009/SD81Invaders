@@ -6,3 +6,6 @@ INVADERS.BIN
 
 # Configuracion local de la herramienta
 .claude/settings.local.json
+
+# Material de referencia descargado, no forma parte del juego
+Computer Archeology/

@@ -2,9 +2,13 @@
 ; bomb.inc.asm - Los proyectiles de los aliens
 ;
 ; Tres ranuras simultaneas y tres tipos animados, como el arcade.
-; Cada bomba sale del alien mas bajo de una columna elegida al
-; azar, que es de donde salian en el original: nunca de un alien
-; que tenga companeros debajo.
+; El tipo no se sortea: va pegado a la ranura, de forma que las
+; tres bombas que puede haber en vuelo son siempre una de cada
+; clase, igual que en el original. Cada una elige columna a su
+; manera - ver bmfire, que es donde esta la gracia.
+;
+; La bomba sale siempre del alien mas bajo de su columna, nunca de
+; uno que tenga companeros debajo.
 ;
 ; Cada ranura lleva su propia cuenta atras de recarga, escalonada
 ; al arrancar para que las tres no disparen a la vez. Lo que dura
@@ -84,10 +88,18 @@ bmrtab: defb 48                 ; hasta 199 puntos
 ; -------------------------------------------------------------
 ; bminit - ranuras vacias con las recargas escalonadas
 ; -------------------------------------------------------------
-bminit: ld ix,bmtab
+bminit: ld a,BMPINI             ; cada cursor, al principio de su tramo
+        ld (bmpcur),a
+        ld a,BMSINI
+        ld (bmscur),a
+        ld ix,bmtab
         ld b,NBOMB
         ld c,20
-bmi1:   ld (ix+0),0
+bmi1:   ld a,NBOMB
+        sub b                   ; 0, 1, 2: el tipo va con la ranura
+        ld (ix+3),a
+        ld (ix+0),0
+        ld (ix+4),0
         ld (ix+5),c
         ld a,c
         add a,20
@@ -171,29 +183,104 @@ bmfree: ld a,(ix+5)             ; ranura libre: contar para recargar
         jp bmfire
 
 ; -------------------------------------------------------------
-; bmfire - lanza una bomba desde una columna con aliens vivos
+; bmfire - lanza una bomba desde la ranura IX
+;
+; Aqui esta lo que de verdad distingue a los tres proyectiles del
+; arcade, que no son tres dibujos distintos sino tres maneras de
+; elegir columna:
+;
+;   0  rolling    persigue al jugador
+;   1  plunger    indices 0-15 de la tabla de columnas
+;   2  squiggly   indices 6-20 de la MISMA tabla
+;
+; De ahi sale el caracter del original: el rolling te obliga a no
+; quedarte quieto y los otros dos son memorizables. Los dos tramos
+; se solapan pero tienen largos primos entre si, 16 y 15, asi que
+; el patron conjunto no se repite hasta 240 disparos.
+;
+; Ninguno de los tres busca una columna alternativa: si la que le
+; toca esta ya barrida, ese tiro sencillamente no sale. Es lo que
+; hace el arcade -FindInColumn devuelve C=0 y el disparo se
+; descarta- y es tambien lo que permite comprarse un respiro
+; despejando la columna que tienes encima.
+;
+; El plunger deja de dispararse cuando queda un solo alien.
 ; -------------------------------------------------------------
+; El numero de tipo es el mismo indice que usa bmspt para el
+; dibujo, asi que 0 es el squiggly y no el rolling. Equivocarlo no
+; da error de nada: simplemente el que persigue sale pintado en
+; zigzag y el zigzag rodando.
 bmfire: ld a,(swleft)
         or a
         ret z
-        call rnd                ; columna de partida
-        and 15
-        cp SWCOLS
-        jr c,bmf1
-        sub SWCOLS
-bmf1:   ld c,a
-        ld b,SWCOLS
-bmf2:   push bc
+        ld a,(ix+3)
+        cp 1
+        jr z,bmfplg
+        cp 2
+        jr z,bmfrol
+        ld hl,bmscur            ; --- squiggly ---
+        ld d,BMSINI
+        ld e,BMSEND
+        jr bmftab
+
+bmfplg: ld a,(swleft)           ; --- plunger ---
+        dec a
+        ret z                   ; con un solo alien, este no dispara
+        ld hl,bmpcur
+        ld d,BMPINI
+        ld e,BMPEND
+
+; -------------------------------------------------------------
+; bmftab - toma la columna que marca el cursor (HL) y lo avanza,
+;          dando la vuelta a D al llegar a E
+; -------------------------------------------------------------
+bmftab: ld c,(hl)               ; indice en curso
+        inc (hl)
+        ld a,(hl)
+        cp e
+        jr c,bmft1
+        ld (hl),d               ; fin de SU tramo: vuelta al principio
+bmft1:  ld b,0
+        ld hl,bmctab
+        add hl,bc
+        ld a,(hl)
+        dec a                   ; la tabla numera las columnas de 1 a 11
+        ld c,a
         call alcol
-        pop bc
-        jr nz,bmf3
-        inc c                   ; columna vacia: probar la siguiente
+        ret z                   ; columna barrida: este tiro no sale
+        jr bmf3
+
+; -------------------------------------------------------------
+; bmfrol - el rolling sale de la columna que tiene encima al
+;          jugador, que es la unica que mira
+;
+; El arcade calcula la columna contando decenasesis desde el alien
+; de referencia y, si le sale una que no existe, se queda con la
+; ultima. Aqui el equivalente es restar swx y dividir por SWDX,
+; recortando por los dos extremos: por arriba porque el jugador
+; puede estar mas a la derecha que la formacion entera, y por
+; abajo porque puede estar mas a la izquierda.
+; -------------------------------------------------------------
+bmfrol: ld a,(plx)
+        add a,PLW/2             ; centro de la nave
+        ld c,a
+        ld a,(swx)
+        ld b,a
         ld a,c
+        sub b                   ; ...respecto al origen del enjambre
+        jr nc,bmfr1
+        xor a                   ; la formacion queda a su derecha
+bmfr1:  rrca                    ; / SWDX
+        rrca
+        rrca
+        rrca
+        and 0fh
         cp SWCOLS
-        jr c,bmf2b
-        ld c,0
-bmf2b:  djnz bmf2
-        ret                     ; ninguna columna util
+        jr c,bmfr2
+        ld a,SWCOLS-1           ; ...o a su izquierda
+bmfr2:  ld c,a
+        call alcol
+        ret z                   ; nadie encima: este tiro no sale
 
 bmf3:   call salpos             ; posicion del alien que dispara
         ld hl,alwid
@@ -210,13 +297,7 @@ bmf3:   call salpos             ; posicion del alien que dispara
         ld a,(cay)
         add a,8                 ; justo por debajo
         ld (ix+2),a
-        call rnd                ; tipo: 0, 1 o 2
-        and 3
-        cp 3
-        jr c,bmf4
-        xor a
-bmf4:   ld (ix+3),a
-        ld (ix+4),0
+        ld (ix+4),0             ; el tipo no se toca: es de la ranura
         ld (ix+0),1
         jp bmdrw
 
@@ -347,20 +428,31 @@ bmera:  call bmspr
         jp sprera
 
 ; -------------------------------------------------------------
-; rnd - pseudoaleatorio de 8 bits
+; ColFireTable - la tabla de columnas del arcade, $1D00, tal cual
+;
+; Es UNA sola tabla de 21 entradas y los dos proyectiles con
+; patron se reparten tramos que se solapan:
+;
+;   plunger    indices 00-0F   (da la vuelta al llegar a 10h)
+;   squiggly   indices 06-14   (da la vuelta al llegar a 15h)
+;
+; Las cinco ultimas entradas parecen ser continuacion de la tabla
+; pero no las usa nadie. En el desensamblado se sospecha que eran
+; para el rolling, antes de que le cambiaran el comportamiento por
+; el de perseguir al jugador.
+;
+; Numera de 1 a 11, asi que hay que restar uno. Y no es uniforme
+; ni pretende serlo: la columna 1 sale siete veces de dieciseis en
+; el tramo del plunger. Ese sesgo es del original.
 ; -------------------------------------------------------------
-rnd:    ld a,(rndsd)
-        ld b,a
-        rrca
-        rrca
-        rrca
-        xor 1fh
-        add a,b
-        sbc a,255
-        ld (rndsd),a
-        ret
+BMPINI  equ 000h                ; tramo del plunger
+BMPEND  equ 010h
+BMSINI  equ 006h                ; tramo del squiggly
+BMSEND  equ 015h
 
-rndsd:  defb 7
+bmctab: defb 001h,007h,001h,001h,001h,004h,00bh,001h
+        defb 006h,003h,001h,001h,00bh,009h,002h,008h
+        defb 002h,00bh,004h,007h,00ah
 
 ; --- Tabla de tipos ---
 bmspt:  defw bmsqg              ; 0 - squiggly (zigzag)
@@ -470,3 +562,5 @@ bmrol:  defb 01000000b,0
 bmtab:  defs NBOMB*BMSZ
 bckx:   defb 0                  ; punto que se esta sondeando
 bcky:   defb 0
+bmpcur: defb BMPINI             ; indice en curso de cada tramo
+bmscur: defb BMSINI
